@@ -9,6 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <style>
     :root {
       --brand: #0b4fc4;
@@ -52,6 +53,7 @@
     .card-title { margin: 0 0 14px; font-size: 16px; font-weight: 600; }
     .card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
     .card-head h3 { margin: 0; font-size: 16px; font-weight: 600; }
+    .head-actions { display: flex; gap: 8px; flex-shrink: 0; }
     .muted { color: var(--muted); font-size: 13px; margin: 2px 0 0; }
 
     /* ---------- Google Sheet ---------- */
@@ -224,7 +226,13 @@
             <h3>Sheet Preview: <span id="previewTenantName"></span></h3>
             <p class="muted" id="previewCount">I-click ang row para makita ang resibo</p>
           </div>
-          <button id="backToUploadBtn" class="btn-ghost">&larr; Back</button>
+          <div class="head-actions">
+            <button id="exportPdfBtn" class="btn-ghost" title="I-export ang lahat ng resibo ng tenant bilang PDF">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M12 18v-6m-3 3l3 3 3-3"/></svg>
+              Export PDF
+            </button>
+            <button id="backToUploadBtn" class="btn-ghost">&larr; Back</button>
+          </div>
         </div>
         <div class="table-scroll">
           <table id="previewTable">
@@ -744,6 +752,48 @@ document.getElementById('backBtn').addEventListener('click', function() {
   document.getElementById('previewSection').scrollIntoView({ behavior: 'smooth' });
 });
 
+// html2canvas ng resibo sa buong laki, kahit pinaliit sa screen
+function renderReceipt(extra = {}) {
+  return html2canvas(document.getElementById('receipt'), {
+    scale: 2,
+    useCORS: true,
+    backgroundColor: '#ffffff', // para hindi maitim ang corners sa JPEG
+    logging: false,
+    onclone: doc => { doc.getElementById('receiptFit').style.zoom = 1; },
+    ...extra
+  });
+}
+
+function downloadBlob(blob, filename) {
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  setTimeout(() => URL.revokeObjectURL(link.href), 10000);
+}
+
+// Sa Buksan Resibo.bat (localhost): i-save mismo sa Rent/<tenant>/ at laging i-overwrite.
+// Kung hindi kaya (GitHub Pages, file://, lumang serve.ps1), normal na download.
+async function saveToTenantFolder(blob, filename) {
+  if (!['localhost', '127.0.0.1'].includes(location.hostname)) return downloadBlob(blob, filename);
+  try {
+    const params = new URLSearchParams({ tenant: currentTenant, file: filename });
+    const res = await fetch('/save?' + params, {
+      method: 'POST',
+      headers: { 'Content-Type': blob.type, 'X-Rent-Save': '1' },
+      body: blob
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    showToast(`Na-save sa Rent/${currentTenant}/${filename}`);
+  } catch (err) {
+    console.error('Hindi ma-save sa folder:', err);
+    downloadBlob(blob, filename);
+    showToast('Hindi ma-save sa folder ng tenant, na-download na lang. Buksan ulit ang Buksan Resibo.bat.', true);
+  }
+}
+
 // Download button event handler (FIXED)
 downloadBtn.addEventListener('click', async function () {
   const receiptElem = document.getElementById('receipt');
@@ -753,44 +803,10 @@ downloadBtn.addEventListener('click', async function () {
   const monthName = document.getElementById('month').innerText.replace(/[\s,]+/g, '_');
   const filename = `${tenantName}-${monthName}.jpeg`;
 
-  const render = (extra = {}) => html2canvas(receiptElem, {
-    scale: 2,
-    useCORS: true,
-    backgroundColor: '#ffffff', // para hindi maitim ang corners sa JPEG
-    logging: false,
-    // buong laki sa JPEG kahit pinaliit sa screen
-    onclone: doc => { doc.getElementById('receiptFit').style.zoom = 1; },
-    ...extra
-  });
-
-  const download = (canvas) => {
-    const link = document.createElement('a');
-    link.href = canvas.toDataURL('image/jpeg', 0.95);
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  // Sa Buksan Resibo.bat (localhost): i-save mismo sa Rent/<tenant>/ at laging i-overwrite.
-  // Kung hindi kaya (GitHub Pages, file://, lumang serve.ps1), normal na download.
+  const render = renderReceipt;
   const save = async (canvas) => {
-    if (!['localhost', '127.0.0.1'].includes(location.hostname)) return download(canvas);
-    try {
-      const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.95));
-      const params = new URLSearchParams({ tenant: currentTenant, file: filename });
-      const res = await fetch('/save?' + params, {
-        method: 'POST',
-        headers: { 'Content-Type': 'image/jpeg', 'X-Rent-Save': '1' },
-        body: blob
-      });
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      showToast(`Na-save sa Rent/${currentTenant}/${filename}`);
-    } catch (err) {
-      console.error('Hindi ma-save sa folder:', err);
-      download(canvas);
-      showToast('Hindi ma-save sa folder ng tenant, na-download na lang. Buksan ulit ang Buksan Resibo.bat.', true);
-    }
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.95));
+    await saveToTenantFolder(blob, filename);
   };
 
   try {
@@ -804,6 +820,46 @@ downloadBtn.addEventListener('click', async function () {
       console.error(err2);
       alert('Failed to generate image. Check the console (F12) for details.');
     }
+  }
+});
+
+// Export PDF: isang page bawat buwan (may Total Amount), kasunod ng pagkakasunod sa preview
+document.getElementById('exportPdfBtn').addEventListener('click', async function () {
+  const btn = this;
+  const indices = [...document.querySelectorAll('#previewBody tr')]
+    .map(tr => Number(tr.dataset.rowIndex))
+    .filter(i => typeof sheetData.data[i][18] === 'number');
+  if (!indices.length) return showToast('Walang resibong ma-e-export para sa tenant na ito.', true);
+
+  const previousMonth = monthSelect.value;
+  const originalLabel = btn.innerHTML;
+  btn.disabled = true;
+  try {
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ unit: 'pt', format: 'a4' });
+    const pageW = pdf.internal.pageSize.getWidth();
+    const pageH = pdf.internal.pageSize.getHeight();
+    const margin = 24;
+
+    for (let i = 0; i < indices.length; i++) {
+      btn.innerText = `Exporting ${i + 1}/${indices.length}...`;
+      selectMonth(indices[i]);
+      const canvas = await renderReceipt();
+      // Sukatin para kasya sa A4 nang hindi nababanat
+      const ratio = Math.min((pageW - margin * 2) / canvas.width, (pageH - margin * 2) / canvas.height);
+      const w = canvas.width * ratio, h = canvas.height * ratio;
+      if (i > 0) pdf.addPage();
+      pdf.addImage(canvas.toDataURL('image/jpeg', 0.85), 'JPEG', (pageW - w) / 2, (pageH - h) / 2, w, h);
+    }
+
+    await saveToTenantFolder(pdf.output('blob'), `${currentTenant.replace(/\s+/g, '_')}-Receipts.pdf`);
+  } catch (err) {
+    console.error('Hindi ma-export ang PDF:', err);
+    showToast('Hindi ma-export ang PDF. Tingnan ang console (F12).', true);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = originalLabel;
+    if (previousMonth !== '' && !isNaN(previousMonth)) selectMonth(previousMonth);
   }
 });
 
