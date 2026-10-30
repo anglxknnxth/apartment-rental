@@ -1,0 +1,7 @@
+# I-ignore ang lahat (kontrata, Excel, resibo ng tenants, atbp.)
+*
+
+# Maliban sa mga ito
+!.gitignore
+!index.html
+!Buksan Resibo.bat
