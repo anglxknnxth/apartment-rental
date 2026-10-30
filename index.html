@@ -10,6 +10,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <link rel="stylesheet" href="koleksyon.css">
   <style>
     :root {
       --brand: #0b4fc4;
@@ -54,6 +55,7 @@
     .card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
     .card-head h3 { margin: 0; font-size: 16px; font-weight: 600; }
     .head-actions { display: flex; gap: 8px; flex-shrink: 0; }
+    .room-badge { display: inline-block; margin-left: 6px; padding: 2px 9px; border-radius: 999px; background: var(--tint); color: var(--brand-dark); font-size: 12px; font-weight: 600; vertical-align: 2px; }
     .muted { color: var(--muted); font-size: 13px; margin: 2px 0 0; }
 
     /* ---------- Google Sheet ---------- */
@@ -108,24 +110,9 @@
     .receipt-toolbar button { height: 42px; box-sizing: border-box; }
     .toolbar-right { display: flex; gap: 8px; }
 
-    /* ---------- Monthly collection summary ---------- */
-    .summary-tiles { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
-    .summary-tile { background: var(--tint); border-radius: 10px; padding: 9px 10px; min-width: 0; }
-    .summary-tile span { display: block; font-size: 10.5px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .summary-tile strong { display: block; margin-top: 2px; font-size: 14px; color: var(--brand-dark); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .summary-tile.total { background: var(--brand); }
-    .summary-tile.total span { color: rgba(255, 255, 255, .8); }
-    .summary-tile.total strong { color: #fff; }
-    .summary-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
-    .summary-chip { display: inline-flex; gap: 6px; align-items: baseline; padding: 5px 10px; border: 1.5px solid var(--line); border-radius: 999px; background: #fff; font-size: 12px; color: var(--ink); cursor: pointer; }
-    .summary-chip strong { color: var(--brand-dark); font-weight: 600; }
-    .summary-chip:hover { border-color: #c4cfde; background: #f8fafd; }
-    .summary-chip.active { border-color: var(--brand); background: var(--tint); }
-    @media (max-width: 600px) { .summary-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-
     /* Desktop: kasya ang kaliwang column sa window; ang Sheet Preview ang kumukuha ng natitirang taas */
     @media (min-width: 1100px) {
-      .col-left { height: calc(100vh - var(--left-top, 180px) - 16px); }
+      .col-left { height: calc(100vh - var(--left-top, 180px) - 18px); }
       .col-left > .card { flex-shrink: 0; }
       .col-left > #previewSection { flex: 1 1 auto; min-height: 280px; display: flex; flex-direction: column; }
       #previewSection .table-scroll { flex: 1; min-height: 160px; max-height: none; }
@@ -167,7 +154,7 @@
     .bill td.total { font-weight: 700; font-size: 26px; text-align: right; }
 
     .mark { color: var(--brand); margin-left: 2px; }
-    .remarks { margin-top: 12px; padding: 10px 14px; background: var(--tint); border-radius: 10px; font-size: 14px; color: var(--ink); }
+    .remarks { margin-top: 12px; padding: 10px 14px; background: var(--tint); border-radius: 10px; font-size: 14px; color: var(--ink); min-height: 58px; }
     .remarks .meta-label { margin-bottom: 2px; }
     .reading-notes { margin-top: 10px; font-size: 11.5px; color: var(--muted); line-height: 1.6; }
     .signatures { margin-top: 64px; display: flex; justify-content: space-between; gap: 48px; font-size: 13px; color: var(--muted); }
@@ -200,8 +187,13 @@
       <h1>Rent Receipt Generator</h1>
       <p>Gumawa ng acknowledgement receipt mula sa Google Sheet</p>
     </div>
+    <nav class="view-tabs" role="tablist">
+      <button class="view-tab active" role="tab" data-view="receipt">Resibo</button>
+      <button class="view-tab" role="tab" data-view="summary">Koleksyon</button>
+    </nav>
   </header>
 
+  <div id="viewReceipt">
   <div class="topbar">
     <ol class="steps" id="steps">
       <li data-step="1" class="active"><span>1</span>Kunin ang data</li>
@@ -252,21 +244,10 @@
         </div>
       </div>
 
-      <div id="summarySection" class="card" hidden>
-        <div class="card-head">
-          <div>
-            <h3>Koleksyon: <span id="summaryMonth"></span></h3>
-            <p class="muted" id="summaryCount"></p>
-          </div>
-        </div>
-        <div class="summary-tiles" id="summaryTiles"></div>
-        <div class="summary-list" id="summaryList"></div>
-      </div>
-
       <div id="previewSection" class="card" style="display:none;">
         <div class="card-head">
           <div>
-            <h3>Sheet Preview: <span id="previewTenantName"></span></h3>
+            <h3>Sheet Preview: <span id="previewTenantName"></span> <span class="room-badge" id="previewRoom" hidden></span></h3>
             <p class="muted" id="previewCount">I-click ang row para makita ang resibo</p>
           </div>
           <div class="head-actions">
@@ -347,7 +328,7 @@
           </table>
         </div>
 
-        <div class="remarks" id="remarksBox" hidden>
+        <div class="remarks" id="remarksBox">
           <span class="meta-label">Remarks</span>
           <span id="remarks"></span>
         </div>
@@ -366,6 +347,124 @@
       </div>
     </section>
   </main>
+  </div>
+
+  <!-- Koleksyon tab: kabuuan ng lahat ng tenant bawat buwan -->
+  <section id="viewSummary" class="summary-view" hidden>
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <h2 class="card-title" style="margin:0;">Koleksyon: <span id="summaryMonth"></span></h2>
+          <p class="muted" id="summaryCount"></p>
+        </div>
+        <label class="field summary-month">Buwan
+          <select id="summaryMonthSelect"></select>
+        </label>
+      </div>
+      <div class="summary-tiles" id="summaryTiles"></div>
+    </div>
+
+    <h2 class="section-title">Koleksyon</h2>
+    <div class="chart-grid">
+      <div class="card">
+        <h3>Kabuuang koleksyon bawat buwan</h3>
+        <p class="muted"><span class="range-text">2 taon</span> hanggang sa napiling buwan · i-click ang column para piliin ang buwan</p>
+        <div class="chart" id="chartTotals"></div>
+      </div>
+      <div class="card">
+        <h3>Breakdown ng singil</h3>
+        <p class="muted">Saan galing ang koleksyon sa napiling buwan</p>
+        <div class="chart chart-breakdown" id="chartBreakdown"></div>
+      </div>
+      <div class="card">
+        <h3>Ngayong taon vs nakaraang taon</h3>
+        <p class="muted" id="yoySummary"></p>
+        <div class="chart-legend" id="chartYoyLegend"></div>
+        <div class="chart" id="chartYoy"></div>
+      </div>
+      <div class="card">
+        <h3>Average na bill bawat tenant</h3>
+        <p class="muted">Kabuuang koleksyon ÷ bilang ng tenant na may singil, <span class="range-text">2 taon</span> hanggang sa napiling buwan</p>
+        <div class="chart" id="chartAvgBill"></div>
+      </div>
+    </div>
+
+    <h2 class="section-title">Mga kwarto</h2>
+    <div class="chart-grid">
+      <div class="card">
+        <h3>Bawat kwarto</h3>
+        <p class="muted">Koleksyon ng bawat kwarto sa napiling buwan (galing sa Y1 ng bawat tab)</p>
+        <div class="chart chart-rooms" id="chartRooms"></div>
+      </div>
+      <div class="card">
+        <h3>Occupancy</h3>
+        <p class="muted">Ilang kwarto ang may nakatira bawat buwan · i-click ang column para piliin ang buwan</p>
+        <div class="chart" id="chartOccupancy"></div>
+      </div>
+      <div class="card span-2">
+        <h3>Koleksyon bawat kwarto, <span class="range-text">2 taon</span></h3>
+        <p class="muted">Ambag ng bawat kwarto sa kabuuang koleksyon · i-click ang column para piliin ang buwan</p>
+        <div class="chart-legend" id="chartRoomStackLegend"></div>
+        <div class="chart" id="chartRoomStack"></div>
+      </div>
+    </div>
+
+    <h2 class="section-title">Kuryente at tubig</h2>
+    <div class="chart-grid">
+      <div class="card span-2">
+        <h3>Kuryente at tubig</h3>
+        <p class="muted">Kabuuan ng lahat ng tenant, <span class="range-text">2 taon</span> hanggang sa napiling buwan</p>
+        <div class="chart-legend" id="chartUtilitiesLegend"></div>
+        <div class="chart" id="chartUtilities"></div>
+      </div>
+      <div class="card">
+        <h3>Rate ng kuryente bawat kwarto (₱/kWh)</h3>
+        <p class="muted">Singil sa kuryente ÷ kWh ng bawat kwarto, <span class="range-text">2 taon</span> hanggang sa napiling buwan</p>
+        <div class="chart-legend" id="chartRateLegend"></div>
+        <div class="chart" id="chartRate"></div>
+      </div>
+      <div class="card">
+        <h3>Rate ng tubig (₱/m³)</h3>
+        <p class="muted">Average na singil bawat m³ ng lahat ng tenant, <span class="range-text">2 taon</span> hanggang sa napiling buwan</p>
+        <div class="chart" id="chartWaterRate"></div>
+      </div>
+      <div class="card">
+        <h3>Konsumo ng kuryente bawat kwarto (kWh)</h3>
+        <p class="muted"><span class="range-text">2 taon</span> hanggang sa napiling buwan · mas madilim = mas malaking konsumo · may value ang napiling buwan</p>
+        <div class="chart-legend" id="chartRoomKwhLegend"></div>
+        <div class="chart" id="chartRoomKwh"></div>
+      </div>
+      <div class="card">
+        <h3>Konsumo ng tubig bawat kwarto (m³)</h3>
+        <p class="muted"><span class="range-text">2 taon</span> hanggang sa napiling buwan · mas madilim = mas malaking konsumo · may value ang napiling buwan</p>
+        <div class="chart-legend" id="chartRoomM3Legend"></div>
+        <div class="chart" id="chartRoomM3"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <h3>Bawat tenant</h3>
+          <p class="muted">I-click ang row para buksan ang resibo ng tenant sa buwang ito</p>
+        </div>
+      </div>
+      <div class="table-scroll">
+        <table id="summaryTable">
+          <thead>
+            <tr><th>Tenant</th><th>Kwarto</th><th>Rent</th><th>Tubig</th><th>Kuryente</th><th>Internet</th><th>Others</th><th>Total</th><th id="summaryLastCol">Remarks</th></tr>
+          </thead>
+          <tbody id="summaryBody"></tbody>
+          <tfoot id="summaryFoot"></tfoot>
+        </table>
+      </div>
+    </div>
+
+    <div class="empty-state" id="summaryEmpty" hidden>
+      <strong>Wala pang data</strong>
+      Hinihintay pa ang data mula sa Google Sheet.
+    </div>
+  </section>
 
 </div>
 
@@ -441,6 +540,7 @@ function syncReceiptView() {
   document.getElementById('receiptToolbar').hidden = !shown;
   document.getElementById('emptyState').hidden = shown;
   setStep(shown ? 3 : (workbook ? 2 : 1));
+  fitLeftColumn(); // nagbabago ang taas ng topbar kapag lumabas/nawala ang Back/Download
   if (shown) fitReceipt();
 }
 
@@ -451,7 +551,7 @@ function fitReceipt() {
   if (receipt.style.display !== 'block') return;
   fit.style.zoom = 1;
   const top = fit.getBoundingClientRect().top + window.scrollY;
-  const available = window.innerHeight - top - 16;
+  const available = window.innerHeight - top - 18; // may kaunting allowance para sa rounding ng zoom
   const scale = Math.min(1, Math.max(0.5, available / receipt.offsetHeight));
   fit.style.zoom = scale;
   document.getElementById('receiptToolbar').style.width = (receipt.offsetWidth * scale) + 'px';
@@ -459,6 +559,7 @@ function fitReceipt() {
 
 // Ang kaliwang column ay kasya sa window; ang Sheet Preview ang kumukuha ng natitirang taas (tingnan ang CSS)
 function fitLeftColumn() {
+  if (document.getElementById('viewReceipt').hidden) return;
   const col = document.querySelector('.col-left');
   const top = col.getBoundingClientRect().top + window.scrollY;
   document.documentElement.style.setProperty('--left-top', top + 'px');
@@ -514,6 +615,12 @@ function isArchived(sheetIndex) {
   return !!(info && info.Hidden);
 }
 
+// Kwarto ng tenant, nakalagay sa cell Y1 ng tab (halimbawa "2A"); '' kung wala
+function roomOf(sheetName) {
+  const cell = workbook.Sheets[sheetName] && workbook.Sheets[sheetName]['Y1'];
+  return cell && cell.v != null ? String(cell.v).trim() : '';
+}
+
 function setSheetStatus(state, text) {
   document.getElementById('sheetStatus').dataset.state = state;
   document.getElementById('sheetStatusText').innerText = text;
@@ -533,6 +640,7 @@ async function loadFromGoogleSheet() {
     const archivedCount = workbook.SheetNames.filter((_, i) => isArchived(i)).length;
     const activeCount = workbook.SheetNames.length - archivedCount;
     setSheetStatus('ok', `Updated ${time} · ${activeCount} active, ${archivedCount} archived`);
+    document.dispatchEvent(new Event('workbook-loaded')); // para sa koleksyon.js
   } catch (err) {
     console.error('Hindi makuha ang Google Sheet:', err);
     // Hinaharang ng Google ang request kapag binuksan ang page bilang file:// (origin "null")
@@ -609,6 +717,10 @@ function renderPreviewTable() {
   const previewTenantName = document.getElementById('previewTenantName');
 
   previewTenantName.innerText = currentTenant;
+  const room = roomOf(currentTenant);
+  const roomBadge = document.getElementById('previewRoom');
+  roomBadge.innerText = room ? `Room ${room}` : '';
+  roomBadge.hidden = !room;
 
   const allRows = [...sheetData.headerRows, ...sheetData.data];
   const maxCols = allRows.reduce((max, row) => row ? Math.max(max, row.length) : max, 0);
@@ -742,10 +854,9 @@ monthSelect.addEventListener('change', function() {
   document.getElementById('others').innerText = formatCurrency(selectedRow[16]) + ' + ' + formatCurrency(selectedRow[17]);
   document.getElementById('totalAmount').innerText = formatCurrency(selectedRow[18]);
 
-  // Remarks (column T): ipakita lang kapag may laman
+  // Remarks (column T): laging nakikita ang card; blangko kapag walang laman
   const remarks = selectedRow[19] == null ? '' : String(selectedRow[19]).trim();
-  document.getElementById('remarks').innerText = remarks;
-  document.getElementById('remarksBox').hidden = !remarks || remarks === '-';
+  document.getElementById('remarks').innerText = remarks === '-' ? '' : remarks;
 
   // Compute the due date. The due day is stored in cell U2 (e.g., 15).
   const sheet = workbook.Sheets[currentTenant];
@@ -784,78 +895,7 @@ monthSelect.addEventListener('change', function() {
   document.querySelectorAll('#previewBody tr').forEach(tr => {
     tr.classList.toggle('selected-row', tr.dataset.rowIndex === String(rowIndex));
   });
-
-  renderSummary();
 });
-
-// Kabuuan ng lahat ng tenant (active at archived) para sa buwang tinitingnan
-function renderSummary() {
-  const box = document.getElementById('summarySection');
-  const current = sheetData.data && sheetData.data[parseInt(monthSelect.value)];
-  if (!workbook || !current || typeof current[0] !== 'number') {
-    box.hidden = true;
-    return;
-  }
-
-  const monthLabel = excelDateToFullMonthYear(current[0]);
-  const num = v => typeof v === 'number' ? v : 0;
-  const sums = { rent: 0, water: 0, elec: 0, others: 0, total: 0 };
-  const tenants = [];
-  workbook.SheetNames.forEach(name => {
-    const row = parseSheet(name).data.find(r =>
-      r && typeof r[0] === 'number' && typeof r[18] === 'number' && excelDateToFullMonthYear(r[0]) === monthLabel);
-    if (!row) return;
-    sums.rent += num(row[1]);
-    sums.water += num(row[15]);
-    sums.elec += num(row[8]);
-    sums.others += num(row[16]) + num(row[17]);
-    sums.total += row[18];
-    tenants.push({ name, total: row[18] });
-  });
-  tenants.sort((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' }));
-
-  document.getElementById('summaryMonth').innerText = monthLabel;
-  document.getElementById('summaryCount').innerText =
-    `${tenants.length} ${tenants.length === 1 ? 'tenant' : 'tenants'} · i-click ang pangalan para makita ang resibo`;
-
-  const tiles = [
-    ['Rent', sums.rent], ['Tubig', sums.water], ['Kuryente', sums.elec],
-    ['Others', sums.others, 'Internet / Others'], ['Total', sums.total]
-  ];
-  document.getElementById('summaryTiles').innerHTML = '';
-  tiles.forEach(([label, value, title], i) => {
-    const tile = document.createElement('div');
-    tile.className = 'summary-tile' + (i === tiles.length - 1 ? ' total' : '');
-    tile.title = title || label;
-    tile.innerHTML = '<span></span><strong></strong>';
-    tile.children[0].innerText = label;
-    tile.children[1].innerText = formatCurrency(value);
-    document.getElementById('summaryTiles').appendChild(tile);
-  });
-
-  const list = document.getElementById('summaryList');
-  list.innerHTML = '';
-  tenants.forEach(t => {
-    const chip = document.createElement('button');
-    chip.className = 'summary-chip' + (t.name === currentTenant ? ' active' : '');
-    chip.innerHTML = '<span></span><strong></strong>';
-    chip.children[0].innerText = t.name;
-    chip.children[1].innerText = formatCurrency(t.total);
-    chip.addEventListener('click', () => openTenantMonth(t.name, monthLabel));
-    list.appendChild(chip);
-  });
-
-  box.hidden = false;
-  fitLeftColumn();
-}
-
-// Lumipat sa ibang tenant pero manatili sa parehong buwan
-function openTenantMonth(name, monthLabel) {
-  tenantSelect.value = name;
-  tenantSelect.dispatchEvent(new Event('change'));
-  const index = sheetData.data.findIndex(r => r && typeof r[0] === 'number' && excelDateToFullMonthYear(r[0]) === monthLabel);
-  if (index >= 0) selectMonth(index);
-}
 
 // Back button (preview step)
 document.getElementById('backToUploadBtn').addEventListener('click', function() {
@@ -876,7 +916,6 @@ document.getElementById('backToUploadBtn').addEventListener('click', function() 
   downloadBtn.style.display = 'none';
   syncReceiptView();
 
-  renderSummary();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 });
 
@@ -1047,6 +1086,7 @@ function excelDateToFullMonthYear(serial) {
   return `${monthName}, ${year}`;
 }
 </script>
+<script src="koleksyon.js"></script>
 
 </body>
 </html>

@@ -1,0 +1,85 @@
+/* Koleksyon tab: styles ng tabs at ng summary ng lahat ng tenant bawat buwan.
+   Ginagamit ng index.html; ang logic ay nasa koleksyon.js. */
+
+/* ---------- Tabs (Resibo / Koleksyon) ---------- */
+.view-tabs { margin-left: auto; display: flex; gap: 4px; padding: 4px; background: #e4eaf3; border-radius: 12px; }
+.view-tab { border: none; background: transparent; padding: 8px 18px; border-radius: 9px; font-size: 14px; font-weight: 600; color: var(--muted); cursor: pointer; }
+.view-tab:hover { color: var(--ink); }
+.view-tab.active { background: #fff; color: var(--brand-dark); box-shadow: 0 1px 3px rgba(16, 32, 64, .12); }
+
+/* ---------- Koleksyon tab ---------- */
+.summary-view { display: flex; flex-direction: column; gap: 20px; }
+.summary-month { min-width: 220px; }
+.summary-tiles { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
+.summary-tile { background: var(--tint); border-radius: 12px; padding: 14px 16px; min-width: 0; }
+.summary-tile span { display: block; font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.summary-tile strong { display: block; margin-top: 4px; font-size: 20px; color: var(--brand-dark); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.summary-tile.total { background: var(--brand); }
+.summary-tile.total span { color: rgba(255, 255, 255, .8); }
+.summary-tile.total strong { color: #fff; }
+#summaryTable { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13.5px; }
+#summaryTable thead { position: sticky; top: 0; z-index: 1; }
+#summaryTable th { background: var(--brand-dark); color: #fff; font-weight: 500; padding: 10px 12px; text-align: right; white-space: nowrap; }
+#summaryTable th:first-child, #summaryTable th:last-child { text-align: left; }
+#summaryTable td { padding: 10px 12px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+#summaryTable td.num { text-align: right; font-variant-numeric: tabular-nums; }
+#summaryTable td.remarks-cell { color: var(--muted); white-space: normal; min-width: 160px; }
+#summaryTable tbody tr { cursor: pointer; }
+#summaryTable tbody tr:nth-child(even) { background: #f8fafd; }
+#summaryTable tbody tr:hover { background: #e8f0ff; }
+#summaryTable tfoot td { background: var(--tint); font-weight: 700; color: var(--brand-dark); border-bottom: none; }
+.tag { margin-left: 8px; padding: 2px 8px; border-radius: 999px; background: #eef0f3; color: var(--muted); font-size: 11px; font-weight: 600; }
+@media (max-width: 800px) {
+  .summary-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .summary-tile.total { grid-column: 1 / -1; }
+  .summary-view .card-head { flex-wrap: wrap; }
+}
+
+/* ---------- Graphs ---------- */
+.chart-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.chart-grid h3 { margin: 0; font-size: 16px; font-weight: 600; }
+.chart { position: relative; height: 230px; margin-top: 14px; }
+.chart svg { display: block; overflow: visible; font-family: inherit; }
+.chart-legend { display: flex; gap: 16px; margin-top: 10px; font-size: 12px; color: var(--muted); }
+.chart-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.chart-legend i { width: 14px; height: 2px; border-radius: 1px; }
+.chart-tip { position: absolute; z-index: 2; pointer-events: none; padding: 8px 10px; border-radius: 8px; background: #fff; border: 1px solid var(--line); box-shadow: 0 6px 18px rgba(16, 32, 64, .14); font-size: 12px; color: var(--ink); white-space: nowrap; }
+.chart-tip div { display: flex; align-items: center; gap: 6px; }
+.chart-tip div + div { margin-top: 2px; }
+.chart-tip i { width: 10px; height: 2px; border-radius: 1px; }
+.chart-tip strong { font-size: 14px; }
+@media (max-width: 900px) { .chart-grid { grid-template-columns: minmax(0, 1fr); } }
+/* Hindi lalapad ang card dahil sa lumang SVG habang nire-redraw pagka-resize */
+.chart-grid > .card { min-width: 0; }
+.chart-rooms { height: auto; }
+
+/* Breakdown ng singil: bar + listahan */
+.chart-breakdown { height: auto; display: flex; flex-wrap: wrap; align-items: center; gap: 12px 28px; padding-top: 10px; }
+.donut-wrap { flex: 0 0 auto; }
+.donut-wrap svg { overflow: visible; }
+.donut-wrap path { cursor: default; }
+.breakdown-list { flex: 1 1 260px; display: flex; flex-direction: column; }
+.breakdown-list div { display: grid; grid-template-columns: 12px 1fr auto 56px; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--line); font-size: 13.5px; }
+.breakdown-list div:last-child { border-bottom: none; }
+.breakdown-list i { width: 12px; height: 12px; border-radius: 3px; }
+.breakdown-list strong { font-weight: 600; font-variant-numeric: tabular-nums; }
+.breakdown-list em { font-style: normal; color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
+
+/* Mga seksyon ng graphs */
+.section-title { margin: 8px 0 -6px; font-size: 18px; font-weight: 600; color: var(--brand-dark); }
+.chart-grid > .span-2 { grid-column: 1 / -1; }
+.chart-legend i.square { width: 10px; height: 10px; border-radius: 2px; }
+
+/* Cellphone: bumababa ang mga tab sa sariling linya, buong lapad */
+@media (max-width: 600px) {
+  .app-header { flex-wrap: wrap; }
+  .view-tabs { margin-left: 0; width: 100%; }
+  .view-tab { flex: 1; }
+}
+
+/* Heatmap scale: min [gradient] max · [outline] Bakante */
+.heat-scale { display: inline-flex; align-items: center; gap: 8px; }
+.heat-scale em { font-style: normal; font-variant-numeric: tabular-nums; }
+.heat-scale b { width: 120px; height: 10px; border-radius: 3px; }
+.heat-scale i { width: 12px; height: 10px; border-radius: 3px; border: 1px solid var(--line); background: #fff; margin-left: 8px; }
+
