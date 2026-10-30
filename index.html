@@ -106,6 +106,30 @@
     /* kasing-lapad ng (pinaliit na) resibo para pantay ang Back sa kaliwang gilid at Download sa kanan; width galing sa fitReceipt() */
     .receipt-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; width: 100%; justify-self: center; }
     .receipt-toolbar button { height: 42px; box-sizing: border-box; }
+    .toolbar-right { display: flex; gap: 8px; }
+
+    /* ---------- Monthly collection summary ---------- */
+    .summary-tiles { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+    .summary-tile { background: var(--tint); border-radius: 10px; padding: 9px 10px; min-width: 0; }
+    .summary-tile span { display: block; font-size: 10.5px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .summary-tile strong { display: block; margin-top: 2px; font-size: 14px; color: var(--brand-dark); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .summary-tile.total { background: var(--brand); }
+    .summary-tile.total span { color: rgba(255, 255, 255, .8); }
+    .summary-tile.total strong { color: #fff; }
+    .summary-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+    .summary-chip { display: inline-flex; gap: 6px; align-items: baseline; padding: 5px 10px; border: 1.5px solid var(--line); border-radius: 999px; background: #fff; font-size: 12px; color: var(--ink); cursor: pointer; }
+    .summary-chip strong { color: var(--brand-dark); font-weight: 600; }
+    .summary-chip:hover { border-color: #c4cfde; background: #f8fafd; }
+    .summary-chip.active { border-color: var(--brand); background: var(--tint); }
+    @media (max-width: 600px) { .summary-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+    /* Desktop: kasya ang kaliwang column sa window; ang Sheet Preview ang kumukuha ng natitirang taas */
+    @media (min-width: 1100px) {
+      .col-left { height: calc(100vh - var(--left-top, 180px) - 16px); }
+      .col-left > .card { flex-shrink: 0; }
+      .col-left > #previewSection { flex: 1 1 auto; min-height: 280px; display: flex; flex-direction: column; }
+      #previewSection .table-scroll { flex: 1; min-height: 160px; max-height: none; }
+    }
     .empty-state { max-width: 680px; width: 100%; margin: 0 auto; padding: 60px 24px; text-align: center; border: 2px dashed #d3ddec; border-radius: 14px; color: var(--muted); }
     .empty-state svg { color: #b5c4dc; margin-bottom: 10px; }
     .empty-state strong { display: block; color: var(--ink); font-size: 15px; margin-bottom: 4px; }
@@ -143,6 +167,8 @@
     .bill td.total { font-weight: 700; font-size: 26px; text-align: right; }
 
     .mark { color: var(--brand); margin-left: 2px; }
+    .remarks { margin-top: 12px; padding: 10px 14px; background: var(--tint); border-radius: 10px; font-size: 14px; color: var(--ink); }
+    .remarks .meta-label { margin-bottom: 2px; }
     .reading-notes { margin-top: 10px; font-size: 11.5px; color: var(--muted); line-height: 1.6; }
     .signatures { margin-top: 64px; display: flex; justify-content: space-between; gap: 48px; font-size: 13px; color: var(--muted); }
     .signatures div { flex: 1; text-align: center; border-top: 1.5px solid var(--ink); padding-top: 8px; }
@@ -185,10 +211,16 @@
 
     <div class="receipt-toolbar" id="receiptToolbar" hidden>
       <button id="backBtn" class="btn-ghost">&larr; Back</button>
-      <button id="downloadBtn" class="btn-primary" style="display:none;">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
-        Download as JPEG
-      </button>
+      <div class="toolbar-right">
+        <button id="copyBtn" class="btn-ghost" title="Kopyahin ang resibo para i-paste sa Messenger/Viber">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          Copy
+        </button>
+        <button id="downloadBtn" class="btn-primary" style="display:none;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+          Download as JPEG
+        </button>
+      </div>
     </div>
   </div>
 
@@ -218,6 +250,17 @@
             </select>
           </label>
         </div>
+      </div>
+
+      <div id="summarySection" class="card" hidden>
+        <div class="card-head">
+          <div>
+            <h3>Koleksyon: <span id="summaryMonth"></span></h3>
+            <p class="muted" id="summaryCount"></p>
+          </div>
+        </div>
+        <div class="summary-tiles" id="summaryTiles"></div>
+        <div class="summary-list" id="summaryList"></div>
       </div>
 
       <div id="previewSection" class="card" style="display:none;">
@@ -302,6 +345,11 @@
             <tr><th>Internet / Others</th><td colspan="4" class="amount" id="others"></td></tr>
             <tr class="total-row"><th>Total</th><td colspan="4" class="total" id="totalAmount"></td></tr>
           </table>
+        </div>
+
+        <div class="remarks" id="remarksBox" hidden>
+          <span class="meta-label">Remarks</span>
+          <span id="remarks"></span>
         </div>
 
         <div class="reading-notes">
@@ -408,7 +456,16 @@ function fitReceipt() {
   fit.style.zoom = scale;
   document.getElementById('receiptToolbar').style.width = (receipt.offsetWidth * scale) + 'px';
 }
-window.addEventListener('resize', fitReceipt);
+
+// Ang kaliwang column ay kasya sa window; ang Sheet Preview ang kumukuha ng natitirang taas (tingnan ang CSS)
+function fitLeftColumn() {
+  const col = document.querySelector('.col-left');
+  const top = col.getBoundingClientRect().top + window.scrollY;
+  document.documentElement.style.setProperty('--left-top', top + 'px');
+}
+
+window.addEventListener('resize', () => { fitLeftColumn(); fitReceipt(); });
+fitLeftColumn();
 
 // Binabasa ang workbook mula sa Google Sheet at nilalagay ang tenants.
 // Kung may napiling tenant na at nandoon pa rin, pipiliin ulit ito.
@@ -491,19 +548,7 @@ document.getElementById('refreshBtn').addEventListener('click', loadFromGoogleSh
 
 tenantSelect.addEventListener('change', function() {
   currentTenant = this.value;
-
-  const worksheet = workbook.Sheets[currentTenant];
-  const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-
-  // Header rows = lahat ng row bago ang unang may petsa (number) sa column A
-  let headerCount = jsonData.findIndex(row => row && typeof row[0] === 'number');
-  if (headerCount < 0) headerCount = jsonData.length;
-
-  sheetData = {
-    headerRows: jsonData.slice(0, headerCount),
-    data: jsonData.slice(headerCount),
-    merges: worksheet['!merges'] || []
-  };
+  sheetData = parseSheet(currentTenant);
 
   monthSelect.innerHTML = '<option disabled selected>Select Month</option>';
 
@@ -525,6 +570,20 @@ tenantSelect.addEventListener('change', function() {
   const latest = latestMonthIndex();
   if (latest >= 0) selectMonth(latest);
 });
+
+// Hinahati ang tab sa header rows at data rows.
+// Header rows = lahat ng row bago ang unang may petsa (number) sa column A
+function parseSheet(name) {
+  const worksheet = workbook.Sheets[name];
+  const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+  let headerCount = jsonData.findIndex(row => row && typeof row[0] === 'number');
+  if (headerCount < 0) headerCount = jsonData.length;
+  return {
+    headerRows: jsonData.slice(0, headerCount),
+    data: jsonData.slice(headerCount),
+    merges: worksheet['!merges'] || []
+  };
+}
 
 // Index ng pinakabagong buwan; mas gusto ang may Total Amount (column S)
 function latestMonthIndex() {
@@ -591,7 +650,7 @@ function renderPreviewTable() {
   document.getElementById('previewCount').innerText =
     `${count} ${count === 1 ? 'buwan' : 'na buwan'} · I-click ang row para makita ang resibo`;
 
-  previewSection.style.display = 'block';
+  previewSection.style.display = ''; // flex o block, depende sa CSS
 }
 
 // Dalawang palapag na header: ang group (hal. "Electricity Usage (kWh)", merged sa sheet)
@@ -683,6 +742,11 @@ monthSelect.addEventListener('change', function() {
   document.getElementById('others').innerText = formatCurrency(selectedRow[16]) + ' + ' + formatCurrency(selectedRow[17]);
   document.getElementById('totalAmount').innerText = formatCurrency(selectedRow[18]);
 
+  // Remarks (column T): ipakita lang kapag may laman
+  const remarks = selectedRow[19] == null ? '' : String(selectedRow[19]).trim();
+  document.getElementById('remarks').innerText = remarks;
+  document.getElementById('remarksBox').hidden = !remarks || remarks === '-';
+
   // Compute the due date. The due day is stored in cell U2 (e.g., 15).
   const sheet = workbook.Sheets[currentTenant];
   let dueCellValue = '';
@@ -720,7 +784,78 @@ monthSelect.addEventListener('change', function() {
   document.querySelectorAll('#previewBody tr').forEach(tr => {
     tr.classList.toggle('selected-row', tr.dataset.rowIndex === String(rowIndex));
   });
+
+  renderSummary();
 });
+
+// Kabuuan ng lahat ng tenant (active at archived) para sa buwang tinitingnan
+function renderSummary() {
+  const box = document.getElementById('summarySection');
+  const current = sheetData.data && sheetData.data[parseInt(monthSelect.value)];
+  if (!workbook || !current || typeof current[0] !== 'number') {
+    box.hidden = true;
+    return;
+  }
+
+  const monthLabel = excelDateToFullMonthYear(current[0]);
+  const num = v => typeof v === 'number' ? v : 0;
+  const sums = { rent: 0, water: 0, elec: 0, others: 0, total: 0 };
+  const tenants = [];
+  workbook.SheetNames.forEach(name => {
+    const row = parseSheet(name).data.find(r =>
+      r && typeof r[0] === 'number' && typeof r[18] === 'number' && excelDateToFullMonthYear(r[0]) === monthLabel);
+    if (!row) return;
+    sums.rent += num(row[1]);
+    sums.water += num(row[15]);
+    sums.elec += num(row[8]);
+    sums.others += num(row[16]) + num(row[17]);
+    sums.total += row[18];
+    tenants.push({ name, total: row[18] });
+  });
+  tenants.sort((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' }));
+
+  document.getElementById('summaryMonth').innerText = monthLabel;
+  document.getElementById('summaryCount').innerText =
+    `${tenants.length} ${tenants.length === 1 ? 'tenant' : 'tenants'} · i-click ang pangalan para makita ang resibo`;
+
+  const tiles = [
+    ['Rent', sums.rent], ['Tubig', sums.water], ['Kuryente', sums.elec],
+    ['Others', sums.others, 'Internet / Others'], ['Total', sums.total]
+  ];
+  document.getElementById('summaryTiles').innerHTML = '';
+  tiles.forEach(([label, value, title], i) => {
+    const tile = document.createElement('div');
+    tile.className = 'summary-tile' + (i === tiles.length - 1 ? ' total' : '');
+    tile.title = title || label;
+    tile.innerHTML = '<span></span><strong></strong>';
+    tile.children[0].innerText = label;
+    tile.children[1].innerText = formatCurrency(value);
+    document.getElementById('summaryTiles').appendChild(tile);
+  });
+
+  const list = document.getElementById('summaryList');
+  list.innerHTML = '';
+  tenants.forEach(t => {
+    const chip = document.createElement('button');
+    chip.className = 'summary-chip' + (t.name === currentTenant ? ' active' : '');
+    chip.innerHTML = '<span></span><strong></strong>';
+    chip.children[0].innerText = t.name;
+    chip.children[1].innerText = formatCurrency(t.total);
+    chip.addEventListener('click', () => openTenantMonth(t.name, monthLabel));
+    list.appendChild(chip);
+  });
+
+  box.hidden = false;
+  fitLeftColumn();
+}
+
+// Lumipat sa ibang tenant pero manatili sa parehong buwan
+function openTenantMonth(name, monthLabel) {
+  tenantSelect.value = name;
+  tenantSelect.dispatchEvent(new Event('change'));
+  const index = sheetData.data.findIndex(r => r && typeof r[0] === 'number' && excelDateToFullMonthYear(r[0]) === monthLabel);
+  if (index >= 0) selectMonth(index);
+}
 
 // Back button (preview step)
 document.getElementById('backToUploadBtn').addEventListener('click', function() {
@@ -741,6 +876,7 @@ document.getElementById('backToUploadBtn').addEventListener('click', function() 
   downloadBtn.style.display = 'none';
   syncReceiptView();
 
+  renderSummary();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 });
 
@@ -839,17 +975,23 @@ document.getElementById('exportPdfBtn').addEventListener('click', async function
     const pdf = new jsPDF({ unit: 'pt', format: 'a4' });
     const pageW = pdf.internal.pageSize.getWidth();
     const pageH = pdf.internal.pageSize.getHeight();
-    const margin = 24;
+    // 4 na resibo bawat page (2x2)
+    const margin = 20, gap = 12;
+    const cellW = (pageW - margin * 2 - gap) / 2;
+    const cellH = (pageH - margin * 2 - gap) / 2;
 
     for (let i = 0; i < indices.length; i++) {
       btn.innerText = `Exporting ${i + 1}/${indices.length}...`;
       selectMonth(indices[i]);
       const canvas = await renderReceipt();
-      // Sukatin para kasya sa A4 nang hindi nababanat
-      const ratio = Math.min((pageW - margin * 2) / canvas.width, (pageH - margin * 2) / canvas.height);
+      const slot = i % 4;
+      if (slot === 0 && i > 0) pdf.addPage();
+      // Sukatin para kasya sa cell nang hindi nababanat, naka-center sa cell
+      const ratio = Math.min(cellW / canvas.width, cellH / canvas.height);
       const w = canvas.width * ratio, h = canvas.height * ratio;
-      if (i > 0) pdf.addPage();
-      pdf.addImage(canvas.toDataURL('image/jpeg', 0.85), 'JPEG', (pageW - w) / 2, (pageH - h) / 2, w, h);
+      const x = margin + (slot % 2) * (cellW + gap) + (cellW - w) / 2;
+      const y = margin + Math.floor(slot / 2) * (cellH + gap) + (cellH - h) / 2;
+      pdf.addImage(canvas.toDataURL('image/jpeg', 0.85), 'JPEG', x, y, w, h);
     }
 
     await saveToTenantFolder(pdf.output('blob'), `${currentTenant.replace(/\s+/g, '_')}-Receipts.pdf`);
@@ -860,6 +1002,25 @@ document.getElementById('exportPdfBtn').addEventListener('click', async function
     btn.disabled = false;
     btn.innerHTML = originalLabel;
     if (previousMonth !== '' && !isNaN(previousMonth)) selectMonth(previousMonth);
+  }
+});
+
+// Kopyahin ang resibo bilang image para ma-paste sa Messenger/Viber.
+// Promise ang ipinapasa sa ClipboardItem para hindi mawala ang user activation habang ginagawa ang image.
+document.getElementById('copyBtn').addEventListener('click', async function () {
+  const btn = this;
+  btn.disabled = true;
+  try {
+    if (!navigator.clipboard || !window.ClipboardItem) throw new Error('Clipboard API not available');
+    await navigator.clipboard.write([new ClipboardItem({
+      'image/png': renderReceipt().then(canvas => new Promise(resolve => canvas.toBlob(resolve, 'image/png')))
+    })]);
+    showToast('Nakopya! I-paste sa Messenger (Ctrl+V).');
+  } catch (err) {
+    console.error('Hindi makopya:', err);
+    showToast('Hindi makopya ang image. Gamitin na lang ang Download.', true);
+  } finally {
+    btn.disabled = false;
   }
 });
 

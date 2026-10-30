@@ -1,7 +1,17 @@
-# I-ignore ang lahat (kontrata, Excel, resibo ng tenants, atbp.)
-*
+# Mga folder (resibo at kontrata ng bawat tenant)
+*/
 
-# Maliban sa mga ito
-!.gitignore
-!index.html
-!Buksan Resibo.bat
+# PDF at documents
+*.pdf
+*.doc
+*.docx
+*.xls
+*.xlsx
+
+# Images
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.webp
+*.heic
