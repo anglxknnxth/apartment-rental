@@ -1,13 +1,13 @@
-/* Koleksyon tab: styles ng tabs at ng summary ng lahat ng tenant bawat buwan.
-   Ginagamit ng index.html; ang logic ay nasa koleksyon.js. */
+/* Dashboard tab: styles ng tabs at ng summary ng lahat ng tenant bawat buwan.
+   Ginagamit ng index.html; ang logic ay nasa dashboard.js. */
 
-/* ---------- Tabs (Resibo / Koleksyon) ---------- */
+/* ---------- Tabs (Receipt / Dashboard / Highlights) ---------- */
 .view-tabs { margin-left: auto; display: flex; gap: 4px; padding: 4px; background: #e4eaf3; border-radius: 12px; }
 .view-tab { border: none; background: transparent; padding: 8px 18px; border-radius: 9px; font-size: 14px; font-weight: 600; color: var(--muted); cursor: pointer; }
 .view-tab:hover { color: var(--ink); }
 .view-tab.active { background: #fff; color: var(--brand-dark); box-shadow: 0 1px 3px rgba(16, 32, 64, .12); }
 
-/* ---------- Koleksyon tab ---------- */
+/* ---------- Dashboard tab ---------- */
 .summary-view { display: flex; flex-direction: column; gap: 20px; }
 .summary-month { min-width: 220px; }
 .summary-tiles { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; }

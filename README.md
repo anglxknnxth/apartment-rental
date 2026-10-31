@@ -23,11 +23,11 @@ I-double-click ang **`Buksan Resibo.bat`**.
 3. **`index.html`** pagka-load:
    - Kinukuha ang published na `.xlsx` mula sa Google Sheet (`SHEET_URL` sa simula ng script).
    - Ipinapakita sa toast kapag na-update ang data (o kapag may error), at pinupuno ang Tenant dropdown. Alphabetical ito, at nakahiwalay ang **Active** at **Archived**.
-   - Kung ang URL ay may `#koleksyon`, ang Koleksyon tab ang unang bubukas.
+   - Kung ang URL ay may `#dashboard` o `#highlights`, ang tab na iyon ang unang bubukas.
 
 ## Mga tab
 
-### Resibo
+### Receipt
 1. Pumili ng **Tenant**. Kusang lalabas ang resibo ng **pinakabagong buwan** na may Total Amount.
 2. Puwedeng pumili ng ibang buwan sa **Buwan** dropdown, o i-click ang row sa **Preview** (pinakabago ang nasa itaas). Buod ang default ng Preview: Date, Rent, Kuryente, Tubig, Internet at Total ng 12 pinakabagong buwan. I-click ang **See more** (katabi ng Export PDF) para makita ang lahat ng column at buwan, at **See less** para bumalik.
 3. Sa itaas ng resibo:
@@ -38,9 +38,9 @@ I-double-click ang **`Buksan Resibo.bat`**.
 
 Sa screen, pinaliliit ang resibo para kasya sa window, pero buong laki pa rin ang JPEG at PDF.
 
-### Koleksyon
+### Dashboard
 - Kabuuan ng **lahat ng tenant** para sa isang buwan: Rent, Tubig, Kuryente, Internet/Others at **Total**.
-- **Paalala sa itaas ng mga tile:** nagsimula ang paupahan noong March 2023, pero mula January 2024 lang ang data sa sheet (wala ang data nina Aling Shirley, Katrina Mendoza at Marielle Domil). Nasa `BUSINESS_START` at `MISSING_TENANTS` sa simula ng `koleksyon.js` ang mga ito.
+- **Paalala sa itaas ng mga tile:** nagsimula ang paupahan noong March 2023, pero mula January 2024 lang ang data sa sheet (wala ang data nina Aling Shirley, Katrina Mendoza at Marielle Domil). Nasa `BUSINESS_START` at `MISSING_TENANTS` sa simula ng `dashboard.js` ang mga ito.
 - **Buwan dropdown:** ang kasalukuyang buwan ang default. Piliin ang **ALL (lahat ng buwan)** para makita ang overall: kabuuan ng lahat ng buwan sa tiles, donut, bawat kwarto at table (may "Ilang buwan" bawat tenant), at lahat ng buwan sa mga graph. Sa ALL, bubuksan ng row sa table ang pinakabagong resibo ng tenant.
 - **Mga graph**, nakahati sa 3 seksyon. Ang mga may buwan sa ilalim ay 2 taon (24 buwan) hanggang sa napiling buwan, o lahat ng buwan kapag ALL. Ipinapakita ang eksaktong halaga kapag tinapatan ng mouse, at sa mga column chart, i-click ang column para piliin ang buwang iyon.
   - **Koleksyon:** kabuuang koleksyon bawat buwan · breakdown ng singil (donut chart: Rent, Tubig, Kuryente, Internet/Others, may halaga at %) · ngayong taon vs nakaraang taon (grouped columns, Jan–Dec, may YTD at % pagbabago) · average na bill bawat tenant (columns)
@@ -53,7 +53,7 @@ Sa screen, pinaliliit ang resibo para kasya sa window, pero buong laki pa rin an
 ### Highlights
 - Mahahalagang detalye mula sa **lahat** ng data (hindi apektado ng napiling buwan):
   - Pinakamatagal na tenant · pinakabagong tenant · pinakamataas at pinakamababang koleksyon sa isang buwan · average bawat buwan · pinakamalakas sa kuryente at tubig (average bawat buwan, kasama lang ang may ≥3 buwang data) · occupancy (average % at kasalukuyang bakante)
-  - Kapag kinlik ang card ng buwan, bubuksan ito sa Koleksyon tab. Kapag tenant, bubuksan ang resibo niya.
+  - Kapag kinlik ang card ng buwan, bubuksan ito sa Dashboard tab. Kapag tenant, bubuksan ang resibo niya.
 - **Lahat ng tenant:** table ng bawat naging tenant (kwarto, mula, hanggang, ilang buwan, kabuuang naibayad, average na bill). I-click ang row para buksan ang pinakabagong resibo.
 - Naaalala sa URL: .
 
@@ -74,7 +74,9 @@ Sa screen, pinaliliit ang resibo para kasya sa window, pero buong laki pa rin an
   | R | Other Charges |
   | S | Total Amount |
   | T | Remarks (laging may card sa resibo; blangko kapag walang laman) |
-  | Y1 | Kwarto ng tenant (halimbawa `2A`); lalabas sa Preview at sa Koleksyon |
+  | Y1 | Kwarto ng tenant (halimbawa `2A`); lalabas sa Preview at sa Dashboard |
+
+- **Bagong kwarto:** kapag may kwartong nadagdag sa gitna (hal. Room 4 noong July 2026), ilagay ito sa `ROOM_OPENED` sa simula ng `dashboard.js` (hal. `{ '4': 'JULY, 2026' }`). Bago ang buwang iyon, hindi ito binibilang sa occupancy at hindi ito lumalabas na "bakante".
   | U2 | Araw ng due date (halimbawa `1` → due sa ika-1 ng buwan) |
 
 - Naka-**Publish to web** ito bilang `.xlsx` (File → Share → Publish to web). Ilang minuto ang delay bago lumabas ang mga pagbabago, kahit i-reload mo ang page.
@@ -84,9 +86,9 @@ Sa screen, pinaliliit ang resibo para kasya sa window, pero buong laki pa rin an
 
 | File | Para saan |
 |---|---|
-| `index.html` | Ang app at ang Resibo tab. Naka-embed na ang logo. |
-| `koleksyon.js` | Logic ng Koleksyon tab at ng paglipat ng tab |
-| `koleksyon.css` | Styles ng Koleksyon tab at ng mga tab sa itaas |
+| `index.html` | Ang app at ang Receipt tab. Naka-embed na ang logo. |
+| `dashboard.js` | Logic ng Dashboard tab at ng paglipat ng tab |
+| `dashboard.css` | Styles ng Dashboard tab at ng mga tab sa itaas |
 | `highlights.js` | Highlights tab: gumagawa ng sariling tab at section, at ng lahat ng kuwenta |
 | `highlights.css` | Styles ng Highlights tab |
 | `favicon.ico` | Icon sa browser tab (ang logo, 16/32/48 px) |

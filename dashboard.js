@@ -1,4 +1,4 @@
-// Koleksyon tab: kabuuan ng lahat ng tenant bawat buwan, at ang paglipat ng tab (Resibo / Koleksyon).
+// Dashboard tab: kabuuan ng lahat ng tenant bawat buwan, at ang paglipat ng tab (Receipt / Dashboard / iba pa).
 //
 // Naka-load pagkatapos ng main script sa index.html, at gumagamit ng mga global mula doon:
 //   workbook, sheetData, tenantSelect, monthSelect, parseSheet, isArchived, roomOf, selectMonth,
@@ -9,6 +9,27 @@
 // Kailan talaga nagsimula ang paupahan, at mga naunang tenant na wala sa Google Sheet
 const BUSINESS_START = 'MARCH, 2023';
 const MISSING_TENANTS = ['Aling Shirley', 'Katrina Mendoza', 'Marielle Domil'];
+
+// Kailan nabuksan ang kwarto, para sa mga kwartong hindi umiiral mula sa simula.
+// Bago ang buwang ito, hindi binibilang ang kwarto sa occupancy at hindi ito "bakante" (wala pa).
+const ROOM_OPENED = { '4': 'JULY, 2026' };
+
+// "JULY, 2026" -> oras ng unang araw ng buwan (para maikumpara ang mga buwan)
+function monthLabelTime(label) {
+  const [month, year] = label.split(', ');
+  return new Date(`${month} 1, ${year}`).getTime();
+}
+
+// true kung bukas na ang kwarto sa buwang iyon (laging true sa ALL)
+function roomOpenIn(room, monthLabel) {
+  const opened = ROOM_OPENED[room];
+  return !opened || monthLabel === ALL_MONTHS || monthLabelTime(monthLabel) >= monthLabelTime(opened);
+}
+
+// Mga kwartong bukas na sa buwang iyon
+function roomsOpenIn(monthLabel) {
+  return allRooms().filter(r => roomOpenIn(r, monthLabel));
+}
 
 
 // Lahat ng buwan (sa lahat ng tab) na may Total Amount, pinakabago muna
@@ -25,8 +46,8 @@ function collectionMonths() {
   return [...months.entries()].sort((a, b) => b[1] - a[1]).map(([label]) => label);
 }
 
-// Punuin ang Buwan dropdown ng Koleksyon tab, tapos i-render ang napiling buwan.
-// Default: ang buwang nasa Resibo tab, o kung wala, ang pinakabago.
+// Punuin ang Buwan dropdown ng Dashboard tab, tapos i-render ang napiling buwan.
+// Default: ang buwang nasa Receipt tab, o kung wala, ang pinakabago.
 function renderSummary() {
   const select = document.getElementById('summaryMonthSelect');
   const hasData = !!workbook;
@@ -57,7 +78,7 @@ function renderSummary() {
 }
 
 // Paalala sa itaas ng mga tile: kulang ang data bago ang unang buwan sa sheet
-// note: kung saan ilalagay (default: ang nasa Koleksyon tab; ginagamit din ng highlights.js)
+// note: kung saan ilalagay (default: ang nasa Dashboard tab; ginagamit din ng highlights.js)
 function renderDataNote(isAll, note = document.getElementById('dataNote')) {
   const months = collectionMonths();
   const first = months[months.length - 1];
@@ -515,8 +536,9 @@ function renderHeatmap(container, months, field, opts) {
     months.forEach((m, i) => {
       const v = value(m, room);
       const x = margin.left + band * i + gap / 2, w = band - gap, h = rowH - gap;
-      // 2px na puwang sa pagitan ng mga cell; ang bakante ay manipis na outline lang
-      svgEl('rect', v == null
+      const opened = roomOpenIn(room, m.label);
+      // 2px na puwang sa pagitan ng mga cell; ang bakante ay manipis na outline lang; walang cell bago mabuksan ang kwarto
+      if (opened) svgEl('rect', v == null
         ? { x: x + 0.5, y: yTop + 0.5, width: w - 1, height: h - 1, rx: 3, fill: '#fff', stroke: CHART.grid }
         : { x, y: yTop, width: w, height: h, rx: 3, fill: rampColor(opts.ramp, t(v)) }, svg);
       // Value lang sa column ng napiling buwan (ang iba ay nasa tooltip)
@@ -527,7 +549,7 @@ function renderHeatmap(container, months, field, opts) {
       }
       const hit = svgEl('rect', { x: margin.left + band * i, y: yTop, width: band, height: rowH, fill: 'transparent' }, svg);
       hit.addEventListener('mouseenter', () => tip.show([[`Room ${room} · ${m.label}`],
-        [v == null ? 'Bakante / walang data' : opts.format(v), null, true]], xCenter(i), yTop));
+        [!opened ? 'Wala pa ang kwarto' : (v == null ? 'Bakante / walang data' : opts.format(v)), null, true]], xCenter(i), yTop));
       hit.addEventListener('mouseleave', () => tip.hide());
     });
   });
@@ -554,18 +576,24 @@ function renderOccupancyChart(container, months, selectedLabel) {
   const total = rooms.length;
   if (!total) return;
   const occ = occupancyByMonth();
-  const count = m => (occ.get(m.label) || new Set()).size;
-  const pct = m => Math.round(count(m) / total * 100);
+  // Ang mga kwartong bukas na lang sa buwang iyon ang binibilang (hal. Room 4 mula July 2026)
+  const open = m => roomsOpenIn(m.label);
+  const occupied = m => occ.get(m.label) || new Set();
+  const count = m => open(m).filter(r => occupied(m).has(r)).length;
+  const pct = m => (open(m).length ? Math.round(count(m) / open(m).length * 100) : 0);
   renderColumnChart(container, months, {
     value: count,
     scale: total <= 8 ? { max: total, step: 1 } : niceScale(total),
     tick: v => String(v),
     selectedLabel,
-    label: m => `${count(m)}/${total} · ${pct(m)}%`,
+    label: m => `${count(m)}/${open(m).length} · ${pct(m)}%`,
     tooltip: m => {
-      const vacant = rooms.filter(r => !(occ.get(m.label) || new Set()).has(r));
-      return [[m.label], [`${count(m)} sa ${total} kwarto may nakatira (${pct(m)}%)`, null, true],
+      const vacant = open(m).filter(r => !occupied(m).has(r));
+      const notYet = rooms.filter(r => !roomOpenIn(r, m.label));
+      const lines = [[m.label], [`${count(m)} sa ${open(m).length} kwarto may nakatira (${pct(m)}%)`, null, true],
         [vacant.length ? `Bakante: ${vacant.map(r => 'Room ' + r).join(', ')}` : 'Walang bakante']];
+      if (notYet.length) lines.push([`Wala pa: ${notYet.map(r => 'Room ' + r).join(', ')}`]);
+      return lines;
     },
     ariaLabel: 'Occupancy bawat buwan'
   });
@@ -884,7 +912,9 @@ function renderRoomsChart(container, monthLabel) {
       else entry.pending = true;
     }
   });
-  const list = [...rooms.values()].sort((a, b) => a.room.localeCompare(b.room, 'en', { numeric: true }));
+  // Sa isang buwan: hindi isinasama ang kwartong hindi pa bukas noon (hal. Room 4 bago July 2026)
+  const list = [...rooms.values()].filter(r => roomOpenIn(r.room, monthLabel))
+    .sort((a, b) => a.room.localeCompare(b.room, 'en', { numeric: true }));
   if (!list.length) return;
 
   const rowH = 44, labelW = 150;
@@ -1076,9 +1106,9 @@ document.getElementById('summaryMonthSelect').addEventListener('change', functio
 });
 
 // Paglipat ng tab. Puwedeng magdagdag ng tab ang ibang file: VIEWS.<view> = '<id ng section>'.
-// Naaalala sa URL: #koleksyon para sa summary, #<view> para sa iba, wala para sa Resibo.
+// Naaalala sa URL: #dashboard para sa summary, #<view> para sa iba, wala para sa Receipt.
 const VIEWS = { receipt: 'viewReceipt', summary: 'viewSummary' };
-const VIEW_HASH = { summary: 'koleksyon' };
+const VIEW_HASH = { summary: 'dashboard' };
 
 function showView(view) {
   if (!VIEWS[view]) view = 'receipt';
@@ -1120,5 +1150,5 @@ document.addEventListener('workbook-loaded', () => {
   if (!document.getElementById('viewSummary').hidden) renderSummary();
 });
 
-// Bumalik sa Koleksyon tab kung doon ka huling nakatingin (#koleksyon sa URL)
-if (location.hash === '#koleksyon') showView('summary');
+// Bumalik sa Dashboard tab kung doon ka huling nakatingin (#dashboard sa URL; gumagana pa rin ang lumang #koleksyon)
+if (location.hash === '#dashboard' || location.hash === '#koleksyon') showView('summary');

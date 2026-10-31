@@ -2,9 +2,9 @@
 // (pinakamatagal na tenant, record na buwan, occupancy, at listahan ng lahat ng tenant).
 //
 // Sariling file ito: ito mismo ang gumagawa ng tab button at ng section. Naka-load pagkatapos ng
-// koleksyon.js, at gumagamit ng mga global mula sa index.html at koleksyon.js:
+// dashboard.js, at gumagamit ng mga global mula sa index.html at dashboard.js:
 //   workbook, parseSheet, isArchived, roomOf, formatCurrency, excelDateToFullMonthYear, shortMonthYear,
-//   tenantSelect, monthlyTotals, occupancyByMonth, allRooms, serialToDate, renderDataNote,
+//   tenantSelect, monthlyTotals, occupancyByMonth, allRooms, roomsOpenIn, serialToDate, renderDataNote,
 //   selectSummaryMonth, openTenantMonth, showView, VIEWS
 //
 // Nire-render kapag binuksan ang tab ('view-shown') o kapag may bagong data ('workbook-loaded').
@@ -184,15 +184,18 @@ function renderHighlights() {
     });
   }
 
-  // 8) Occupancy: average na % ng mga kwartong may nakatira, at ang kasalukuyan
+  // 8) Occupancy: average na % ng mga kwartong may nakatira, at ang kasalukuyan.
+  // Ang mga kwartong bukas na lang sa bawat buwan ang binibilang (ROOM_OPENED sa dashboard.js).
   if (rooms.length && months.length) {
-    const pct = m => (occ.get(m.label) || new Set()).size / rooms.length * 100;
+    const occupiedIn = m => roomsOpenIn(m.label).filter(r => (occ.get(m.label) || new Set()).has(r));
+    const pct = m => occupiedIn(m).length / (roomsOpenIn(m.label).length || 1) * 100;
     const avgPct = months.reduce((s, m) => s + pct(m), 0) / months.length;
-    const now = occ.get(latest.label) || new Set();
-    const vacant = rooms.filter(r => !now.has(r));
+    const openNow = roomsOpenIn(latest.label);
+    const now = occupiedIn(latest);
+    const vacant = openNow.filter(r => !now.includes(r));
     cards.push({
       label: 'Occupancy', value: `${Math.round(avgPct)}% average`,
-      detail: `Ngayong ${shortMonthYear(latest.serial)}: ${now.size}/${rooms.length} · ${vacant.length ? 'Bakante: ' + vacant.map(r => 'Room ' + r).join(', ') : 'walang bakante'}`
+      detail: `Ngayong ${shortMonthYear(latest.serial)}: ${now.length}/${openNow.length} · ${vacant.length ? 'Bakante: ' + vacant.map(r => 'Room ' + r).join(', ') : 'walang bakante'}`
     });
   }
 

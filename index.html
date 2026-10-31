@@ -11,7 +11,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <link rel="stylesheet" href="koleksyon.css">
+  <link rel="stylesheet" href="dashboard.css">
   <link rel="stylesheet" href="highlights.css">
   <style>
     :root {
@@ -198,8 +198,8 @@
       <p>Gumawa ng acknowledgement receipt mula sa Google Sheet</p>
     </div>
     <nav class="view-tabs" role="tablist">
-      <button class="view-tab active" role="tab" data-view="receipt">Resibo</button>
-      <button class="view-tab" role="tab" data-view="summary">Koleksyon</button>
+      <button class="view-tab active" role="tab" data-view="receipt">Receipt</button>
+      <button class="view-tab" role="tab" data-view="summary">Dashboard</button>
     </nav>
   </header>
 
@@ -355,7 +355,7 @@
   </main>
   </div>
 
-  <!-- Koleksyon tab: kabuuan ng lahat ng tenant bawat buwan -->
+  <!-- Dashboard tab: kabuuan ng lahat ng tenant bawat buwan -->
   <section id="viewSummary" class="summary-view" hidden>
     <div class="card">
       <div class="card-head">
@@ -656,7 +656,7 @@ async function loadFromGoogleSheet() {
     const archivedCount = workbook.SheetNames.filter((_, i) => isArchived(i)).length;
     const activeCount = workbook.SheetNames.length - archivedCount;
     setSheetStatus('ok', `Na-update ang data (${time}) · ${activeCount} active, ${archivedCount} archived`);
-    document.dispatchEvent(new Event('workbook-loaded')); // para sa koleksyon.js
+    document.dispatchEvent(new Event('workbook-loaded')); // para sa dashboard.js at highlights.js
   } catch (err) {
     console.error('Hindi makuha ang Google Sheet:', err);
     // Hinaharang ng Google ang request kapag binuksan ang page bilang file:// (origin "null")
@@ -1138,7 +1138,7 @@ function watchForCodeUpdates() {
   }, 2000);
 }
 
-// Ibalik ang tenant at buwan pagkatapos ng auto-reload (ang tab ay nasa #koleksyon na ng URL)
+// Ibalik ang tenant at buwan pagkatapos ng auto-reload (ang tab ay nasa #dashboard o #highlights na ng URL)
 function restoreReloadState() {
   let state = null;
   try {
@@ -1168,7 +1168,7 @@ function excelDateToFullMonthYear(serial) {
   return `${monthName}, ${year}`;
 }
 </script>
-<script src="koleksyon.js"></script>
+<script src="dashboard.js"></script>
 <script src="highlights.js"></script>
 
 </body>
