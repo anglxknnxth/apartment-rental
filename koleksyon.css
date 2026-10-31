@@ -10,7 +10,7 @@
 /* ---------- Koleksyon tab ---------- */
 .summary-view { display: flex; flex-direction: column; gap: 20px; }
 .summary-month { min-width: 220px; }
-.summary-tiles { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
+.summary-tiles { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; }
 .summary-tile { background: var(--tint); border-radius: 12px; padding: 14px 16px; min-width: 0; }
 .summary-tile span { display: block; font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .summary-tile strong { display: block; margin-top: 4px; font-size: 20px; color: var(--brand-dark); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -83,3 +83,8 @@
 .heat-scale b { width: 120px; height: 10px; border-radius: 3px; }
 .heat-scale i { width: 12px; height: 10px; border-radius: 3px; border: 1px solid var(--line); background: #fff; margin-left: 8px; }
 
+
+/* Paalala: kulang ang data bago ang unang buwan sa sheet */
+.data-note { position: relative; margin: 0 0 14px; padding: 10px 14px 10px 38px; border-radius: 10px; background: var(--tint); color: var(--muted); font-size: 13px; line-height: 1.55; }
+.data-note::before { content: "i"; position: absolute; left: 13px; top: 11px; width: 16px; height: 16px; border-radius: 50%; background: var(--brand); color: #fff; font-size: 11px; font-weight: 700; font-style: italic; line-height: 16px; text-align: center; }
+.data-note strong { color: var(--brand-dark); font-weight: 600; }

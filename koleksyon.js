@@ -6,6 +6,10 @@
 //
 // Nire-render ulit kapag may bagong data mula sa Google Sheet (event na 'workbook-loaded').
 
+// Kailan talaga nagsimula ang paupahan, at mga naunang tenant na wala sa Google Sheet
+const BUSINESS_START = 'MARCH, 2023';
+const MISSING_TENANTS = ['Aling Shirley', 'Katrina Mendoza', 'Marielle Domil'];
+
 
 // Lahat ng buwan (sa lahat ng tab) na may Total Amount, pinakabago muna
 function collectionMonths() {
@@ -52,6 +56,24 @@ function renderSummary() {
   renderSummaryMonth(select.value);
 }
 
+// Paalala sa itaas ng mga tile: kulang ang data bago ang unang buwan sa sheet
+function renderDataNote(isAll) {
+  const months = collectionMonths();
+  const first = months[months.length - 1];
+  const note = document.getElementById('dataNote');
+  const b = text => { const s = document.createElement('strong'); s.innerText = text; return s; };
+  note.innerHTML = '';
+  const names = MISSING_TENANTS.length > 1
+    ? `${MISSING_TENANTS.slice(0, -1).join(', ')} at ${MISSING_TENANTS[MISSING_TENANTS.length - 1]}`
+    : MISSING_TENANTS.join('');
+  note.append('Nagsimula ang paupahan noong ', b(BUSINESS_START), ', pero mula ', b(first),
+    ` lang ang data sa Google Sheet. Wala rito ang data nina ${names}.`);
+  if (isAll) {
+    note.append(document.createElement('br'),
+      `Kaya hindi pa kasama sa kabuuang ito ang koleksyon mula ${BUSINESS_START} hanggang bago ang ${first}.`);
+  }
+}
+
 // Kabuuan ng lahat ng tenant (active at archived) para sa isang buwan, o sa lahat ng buwan (ALL)
 function renderSummaryMonth(monthLabel) {
   const isAll = monthLabel === ALL_MONTHS;
@@ -85,10 +107,11 @@ function renderSummaryMonth(monthLabel) {
   document.getElementById('summaryMonth').innerText = heading;
   document.getElementById('summaryCount').innerText = `${tenants.length} ${tenants.length === 1 ? 'tenant' : 'tenants'}`;
   document.getElementById('summaryLastCol').innerText = isAll ? 'Ilang buwan' : 'Remarks';
+  renderDataNote(isAll);
 
   const tiles = [
     ['Rent', sums.rent], ['Tubig', sums.water], ['Kuryente', sums.elec],
-    ['Internet / Others', sums.internet + sums.others], ['Total', sums.total]
+    ['Internet', sums.internet], ['Others', sums.others], ['Total', sums.total]
   ];
   const tilesBox = document.getElementById('summaryTiles');
   tilesBox.innerHTML = '';

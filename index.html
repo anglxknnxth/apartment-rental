@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Apartment Rental Receipt</title>
+  <link rel="icon" href="favicon.ico" sizes="16x16 32x32 48x48">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -97,10 +98,11 @@
     #previewTable th { background: var(--brand-dark); color: #fff; font-weight: 500; padding: 9px 10px; text-align: center; white-space: nowrap; border-bottom: 1px solid rgba(255, 255, 255, .15); }
     #previewTable th.group { font-weight: 600; border-left: 1px solid rgba(255, 255, 255, .2); border-right: 1px solid rgba(255, 255, 255, .2); }
     #previewTable tr.sub-header th { background: #16408f; font-size: 11.5px; padding: 6px 10px; }
-    #previewTable td { padding: 8px 10px; border-bottom: 1px solid var(--line); text-align: center; white-space: nowrap; }
+    #previewTable td { padding: 8px 10px; border-bottom: 1px solid var(--line); text-align: center; white-space: nowrap; font-variant-numeric: tabular-nums; }
     #previewTable tbody tr:nth-child(even) { background: #f8fafd; }
     #previewTable tbody tr:hover { background: #e8f0ff; cursor: pointer; }
-    #previewTable tbody tr.selected-row { background: var(--tint) !important; font-weight: 600; color: var(--brand-dark); }
+    /* Walang bold sa napiling row: kapag lumapad ang text, gumagalaw ang lapad ng mga column */
+    #previewTable tbody tr.selected-row { background: var(--tint) !important; color: var(--brand-dark); }
     #previewTable tbody tr.selected-row td:first-child { box-shadow: inset 4px 0 0 var(--brand); }
     #previewTable tbody tr.empty-row td { color: #bbb; font-style: italic; }
 
@@ -361,6 +363,7 @@
           <select id="summaryMonthSelect"></select>
         </label>
       </div>
+      <p class="data-note" id="dataNote"></p>
       <div class="summary-tiles" id="summaryTiles"></div>
     </div>
 
@@ -723,7 +726,9 @@ function renderPreviewTable() {
   roomBadge.hidden = !room;
 
   const allRows = [...sheetData.headerRows, ...sheetData.data];
-  const maxCols = allRows.reduce((max, row) => row ? Math.max(max, row.length) : max, 0);
+  // Hanggang Total Amount (column S) lang; hindi ipinapakita ang Remarks (T), Expected date (U), V–X at ang kwarto (Y1)
+  const PREVIEW_LAST_COL = 18;
+  const maxCols = Math.min(PREVIEW_LAST_COL + 1, allRows.reduce((max, row) => row ? Math.max(max, row.length) : max, 0));
 
   renderPreviewHeader(maxCols);
 
