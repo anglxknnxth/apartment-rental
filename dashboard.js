@@ -171,28 +171,39 @@ function renderSummaryMonth(monthLabel) {
 }
 
 // ---------- Graphs ----------
-// Mga kulay: validated (dataviz validate_palette.js, sa puting card) — blue at orange, colorblind-safe.
+// Halo ng kulay at puti (t = 0: kulay mismo, 1: puti), para sa maputlang "hindi napili" na bersyon
+function soft(hex, t = 0.35) {
+  const c = [1, 3, 5].map(k => parseInt(hex.slice(k, k + 2), 16));
+  return '#' + c.map(v => Math.round(v + (255 - v) * t).toString(16).padStart(2, '0')).join('');
+}
+
+// Mga kulay: validated (dataviz validate_palette.js, sa puting card). Bawat seksyon may sariling accent:
+// Koleksyon = violet, Mga kwarto = teal, Kuryente = amber, Tubig = blue (ilaw = dilaw, tubig = asul).
 const CHART = {
-  accent: '#2a78d6',   // napiling buwan / Kuryente
-  soft: '#86b6ef',     // ibang buwan (de-emphasis, parehong blue)
-  water: '#eb6834',    // Tubig
+  accent: '#00897b',   // teal: default / Mga kwarto
+  violet: '#5b3fd9',   // Koleksyon
+  magenta: '#c2185b',  // average na bill / Mga tenant
+  elec: '#bf7c00',     // Kuryente (amber)
+  water: '#1565c0',    // Tubig (blue)
+  coral: '#e64a19',    // pagbaba / nawalang kita
   grid: '#e8ecf2',
   axis: '#c9d2df',
   ink: '#1c2533',
   muted: '#6b7686',
   height: 230
 };
+CHART.soft = soft(CHART.accent); // ibang buwan (de-emphasis, parehong kulay)
 // Categorical slots para sa mga kwarto (sa ganitong ayos). Validated: pumapasa ang magkakatabing pares;
 // mababa ang contrast ng aqua at yellow sa puti, kaya laging may legend + end labels + tooltip.
 const SLOTS = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100'];
 const OTHER_COLOR = '#9aa3af'; // "Iba pa" kapag higit sa 4 ang kwarto
-// Breakdown bar, sa ganitong ayos: Rent, Tubig, Kuryente, Others. Hindi puwedeng magkatabi ang
-// orange at yellow (magkamukha kahit sa normal na paningin), kaya nasa magkabilang dulo sila.
+// Breakdown, sa ganitong ayos: Rent (teal), Tubig (blue), Kuryente (amber), Others (violet).
+// Validated: pinakamalapit na magkatabing pares (teal ↔ blue) ΔE 17.1 normal / 16.6 CVD; lahat ≥ 3:1 sa puti.
 const BREAKDOWN = [
-  { key: 'rent', name: 'Rent', color: '#1baf7a' },
-  { key: 'water', name: 'Tubig', color: '#eb6834' },
-  { key: 'elec', name: 'Kuryente', color: '#2a78d6' },
-  { key: 'otherAll', name: 'Internet / Others', color: '#eda100' }
+  { key: 'rent', name: 'Rent', color: CHART.accent },
+  { key: 'water', name: 'Tubig', color: CHART.water },
+  { key: 'elec', name: 'Kuryente', color: CHART.elec },
+  { key: 'otherAll', name: 'Internet / Others', color: CHART.violet }
 ];
 const SVG_NS = 'http://www.w3.org/2000/svg';
 let lastChartMonth = null;
@@ -403,12 +414,12 @@ function renderYoyChart(container, all, selected) {
   }
   document.getElementById('yoySummary').innerText = text;
 
-  // Grouped columns, luma -> bago mula kaliwa: maputlang blue ang mga nakaraang taon (mas luma = mas maputla),
-  // at accent blue ang ngayong taon
+  // Grouped columns, luma -> bago mula kaliwa: maputlang violet ang mga nakaraang taon (mas luma = mas maputla),
+  // at violet ang ngayong taon (kulay ng seksyong Koleksyon)
   const older = years.length - 1;
   renderGroupedColumnChart(container, months, years.map((y, k) => ({
     name: String(y),
-    color: y === year ? CHART.accent : rampColor(BLUE_RAMP, older > 1 ? 0.1 + 0.25 * k / (older - 1) : 0.3),
+    color: y === year ? CHART.violet : rampColor(VIOLET_RAMP, older > 1 ? 0.25 + 0.3 * k / (older - 1) : 0.45),
     value: m => m.byYear[y]
   })), {
     format: v => formatCurrency(v),
@@ -427,6 +438,8 @@ function renderAvgBillChart(container, months, selectedLabel) {
     label: m => compactPeso(avg(m)),
     tooltip: m => [[m.label], [formatCurrency(avg(m)), null, true],
       [`${formatCurrency(m.total)} ÷ ${m.tenantCount} ${m.tenantCount === 1 ? 'tenant' : 'tenants'}`]],
+    color: CHART.magenta,
+    softColor: soft(CHART.magenta),
     ariaLabel: 'Average na bill bawat tenant'
   });
 }
@@ -489,7 +502,9 @@ function renderGroupedColumnChart(container, months, series, opts) {
 // ---- Generic na heatmap: kwarto × buwan, isang hue mula maputla hanggang madilim ----
 // ramp: listahan ng hex mula mababa hanggang mataas; walang kulay ang bakante (null)
 const BLUE_RAMP = ['#cde2fb', '#9ec5f4', '#6da7ec', '#3987e5', '#256abf', '#184f95', '#0d366b'];
-const ORANGE_RAMP = ['#fde4d8', '#f9c3a8', '#f39a74', '#eb6834', '#c94f1f', '#9c3b15', '#6e2a0f'];
+const AMBER_RAMP = ['#fdedc8', '#f8d47f', '#efb63a', '#dc9a0c', '#bf7c00', '#925e00', '#664100'];
+const VIOLET_RAMP = ['#e3ddfb', '#c2b5f5', '#9c89ec', '#7a62e3', '#5b3fd9', '#4530aa', '#2f217a'];
+const TEAL_RAMP = ['#ccefeb', '#94dcd3', '#55c2b5', '#1fa596', '#00897b', '#006a5f', '#004a42'];
 
 function rampColor(ramp, t) {
   const pos = Math.max(0, Math.min(1, t)) * (ramp.length - 1);
@@ -638,7 +653,7 @@ function renderVacancyChart(container, months, selectedLabel) {
       const tenants = [...((who.get(m.label) || {})[room] || [])];
       const opened = roomOpenIn(room, m.label);
       const x = margin.left + band * i + gap / 2, w = band - gap, h = rowH - gap;
-      const dim = selectedLabel && m.label !== selectedLabel ? 0.55 : 1;
+      const dim = selectedLabel && m.label !== selectedLabel ? 0.7 : 1;
       if (opened) svgEl('rect', tenants.length
         ? { x, y: yTop, width: w, height: h, rx: 3, fill: CHART.accent, opacity: dim }
         : { x: x + 0.5, y: yTop + 0.5, width: w - 1, height: h - 1, rx: 3, fill: '#fff', stroke: CHART.axis }, svg);
@@ -710,7 +725,7 @@ function renderStackedColumnChart(container, months, series, opts) {
       const r = isTop ? Math.min(4, h, barW / 2) : 0;
       svgEl('path', {
         d: `M${x},${bottom} V${yTop + r} Q${x},${yTop} ${x + r},${yTop} H${x + barW - r} Q${x + barW},${yTop} ${x + barW},${yTop + r} V${bottom} Z`,
-        fill: p.s.color, opacity: selected || !selectedLabel ? 1 : 0.55
+        fill: p.s.color, opacity: selected || !selectedLabel ? 1 : 0.7
       }, svg);
     });
     if (selected && totalLabel) {
@@ -733,7 +748,7 @@ function renderStackedColumnChart(container, months, series, opts) {
 // ---- Konsumo ng tubig bawat kwarto (m³) ----
 function renderRoomM3Chart(container, months) {
   renderHeatmap(container, months, 'roomM3', {
-    ramp: ORANGE_RAMP, // pangalawang sequential context: orange (kapareho ng Tubig)
+    ramp: BLUE_RAMP, // kapareho ng kulay ng Tubig
     unit: 'm³',
     format: v => v.toLocaleString('en-PH', { maximumFractionDigits: 1 }) + ' m³',
     short: v => v.toLocaleString('en-PH', { maximumFractionDigits: 1 }),
@@ -856,7 +871,7 @@ function renderLineChart(container, months, series, opts) {
     if (lastI < 0) return;
     // opts.area: maputlang fill sa ilalim (para sa iisang series na walang puwang)
     if (opts.area) {
-      svgEl('path', { d: `${d}V${bottom} H${xAt(firstI)} Z`, fill: s.color, opacity: 0.12 }, svg);
+      svgEl('path', { d: `${d}V${bottom} H${xAt(firstI)} Z`, fill: s.color, opacity: 0.2 }, svg);
     }
     svgEl('path', { d, fill: 'none', stroke: s.color, 'stroke-width': 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }, svg);
     // Tuldok din sa mga nag-iisang punto (walang katabi), para makita pa rin
@@ -915,7 +930,7 @@ function renderLineChart(container, months, series, opts) {
 // ---- Konsumo ng kuryente bawat kwarto (kWh) ----
 function renderRoomKwhChart(container, months) {
   renderHeatmap(container, months, 'roomKwh', {
-    ramp: BLUE_RAMP,
+    ramp: AMBER_RAMP, // kapareho ng kulay ng Kuryente
     unit: 'kWh',
     format: v => Math.round(v).toLocaleString('en-PH') + ' kWh',
     short: v => Math.round(v).toLocaleString('en-PH'),
@@ -1073,6 +1088,8 @@ function renderTotalsChart(container, months, selectedLabel) {
     selectedLabel,
     label: m => compactPeso(m.total),
     tooltip: m => [[m.label], [formatCurrency(m.total), null, true]],
+    color: CHART.violet,
+    softColor: soft(CHART.violet),
     ariaLabel: 'Kabuuang koleksyon bawat buwan'
   });
 }
@@ -1129,7 +1146,7 @@ function renderColumnChart(container, months, o) {
 // Stacked columns: Kuryente (ibaba) at Tubig (ibabaw) bawat buwan
 function renderUtilitiesChart(container, months, selectedLabel) {
   renderStackedColumnChart(container, months, [
-    { name: 'Kuryente', color: CHART.accent, value: m => m.elec },
+    { name: 'Kuryente', color: CHART.elec, value: m => m.elec },
     { name: 'Tubig', color: CHART.water, value: m => m.water }
   ], {
     selectedLabel,
@@ -1144,7 +1161,7 @@ function renderCumulativeChart(container, all, months) {
   let sum = 0;
   all.forEach(m => { sum += m.total; cum.set(m.label, sum); });
   renderLineChart(container, months, [
-    { name: 'Naipon', color: CHART.accent, value: m => cum.get(m.label) }
+    { name: 'Naipon', color: CHART.violet, value: m => cum.get(m.label) }
   ], {
     zeroBased: true,
     area: true,
@@ -1178,6 +1195,8 @@ function renderYearlyChart(container, all, selected) {
     tooltip: p => [[p.label], [formatCurrency(p.total), null, true], [`${p.count} buwan may data`],
       ...(p.proj ? [[`Tantya sa buong taon: ${formatCurrency(p.proj)}`]] : [])],
     clickable: false,
+    color: CHART.violet,
+    softColor: soft(CHART.violet),
     ariaLabel: 'Koleksyon bawat taon'
   });
 }
@@ -1190,8 +1209,8 @@ function renderTrendChart(container, all, months) {
     avg.set(m.label, all.slice(i - 11, i + 1).reduce((s, x) => s + x.total, 0) / 12);
   });
   renderLineChart(container, months, [
-    { name: 'Bawat buwan', color: CHART.soft, value: m => m.total },
-    { name: '12-buwang average', color: CHART.accent, value: m => (avg.has(m.label) ? avg.get(m.label) : null) }
+    { name: 'Bawat buwan', color: soft(CHART.violet), value: m => m.total },
+    { name: '12-buwang average', color: CHART.violet, value: m => (avg.has(m.label) ? avg.get(m.label) : null) }
   ], {
     zeroBased: true,
     format: v => formatCurrency(v),
@@ -1225,12 +1244,12 @@ function renderChangeChart(container, all, months, selectedLabel) {
   months.forEach((m, i) => {
     const v = diff(m);
     const prev = prevOf.get(m.label);
-    const up = v >= 0, color = up ? CHART.accent : CHART.water;
+    const up = v >= 0, color = up ? CHART.accent : CHART.coral;
     const selected = m.label === selectedLabel;
     if (v) {
       const top = Math.min(y(v), zero), h = Math.abs(y(v) - zero);
       svgEl('rect', { x: xCenter(i) - barW / 2, y: top, width: barW, height: Math.max(h, 1), rx: Math.min(3, h / 2),
-        fill: color, opacity: selected || !selectedLabel ? 1 : 0.55 }, svg);
+        fill: color, opacity: selected || !selectedLabel ? 1 : 0.7 }, svg);
       if (selected) {
         const t = svgEl('text', { x: xCenter(i), y: up ? y(v) - 7 : y(v) + 15, 'text-anchor': 'middle', 'font-size': 11, 'font-weight': 600, fill: CHART.ink }, svg);
         t.textContent = `${up ? '▲' : '▼'} ${compactPeso(Math.abs(v))}`;
@@ -1401,8 +1420,8 @@ function renderLostRentChart(container, months, selectedLabel) {
   renderColumnChart(container, months, {
     value: m => lost.get(m.label).sum,
     selectedLabel,
-    color: CHART.water,
-    softColor: ORANGE_RAMP[1],
+    color: CHART.coral,
+    softColor: soft(CHART.coral),
     label: m => compactPeso(lost.get(m.label).sum),
     tooltip: m => {
       const l = lost.get(m.label);
@@ -1440,8 +1459,8 @@ function renderSeasonChart(container, all, selected, field) {
   renderColumnChart(container, points, {
     value: p => p.avg,
     selectedLabel: points[serialToDate(selected.serial).getMonth()].label,
-    color: isKwh ? CHART.accent : CHART.water,
-    softColor: isKwh ? CHART.soft : ORANGE_RAMP[1],
+    color: isKwh ? CHART.elec : CHART.water,
+    softColor: soft(isKwh ? CHART.elec : CHART.water),
     tick: v => v.toLocaleString('en-PH', { maximumFractionDigits: 0 }),
     label: p => fmt(p.avg),
     tooltip: p => [[p.label], [p.years.length ? fmt(p.avg) : 'walang data', null, true],

@@ -6,7 +6,7 @@
 //   workbook, currentTenant, tenantSelect, parseSheet, isArchived, roomOf, formatCurrency,
 //   excelDateToFullMonthYear, shortMonthYear, serialToDate, renderColumnChart, renderLineChart,
 //   renderStackedColumnChart, renderGroupedColumnChart, renderBreakdownChart, monthlyTotals, rampColor,
-//   BLUE_RAMP, BREAKDOWN, OTHER_COLOR, compactPeso, CHART, showView, VIEWS (renderColumnChart: color/clickable options)
+//   TEAL_RAMP, BREAKDOWN, OTHER_COLOR, compactPeso, CHART, showView, VIEWS (renderColumnChart: color/clickable options)
 //   at mula sa highlights.js: highlightRankLists, tenantStats, monthChanges, HL_MIN_MONTHS
 //
 // Nire-render kapag binuksan ang tab ('view-shown') o kapag may bagong data ('workbook-loaded').
@@ -433,7 +433,7 @@ function renderTenantCharts(months) {
   const older = years.length - 1;
   renderGroupedColumnChart(document.getElementById('tpChartYears'), calendar, years.map((y, k) => ({
     name: String(y),
-    color: k === older ? CHART.accent : rampColor(BLUE_RAMP, older > 1 ? 0.1 + 0.25 * k / (older - 1) : 0.3),
+    color: k === older ? CHART.accent : rampColor(TEAL_RAMP, older > 1 ? 0.25 + 0.3 * k / (older - 1) : 0.45),
     value: c => (byYearMonth.has(`${y}-${c.i}`) ? byYearMonth.get(`${y}-${c.i}`) : null)
   })), {
     format: v => formatCurrency(v),
@@ -445,8 +445,9 @@ function renderTenantCharts(months) {
   renderColumnChart(document.getElementById('tpChartElec'), months, {
     value: m => m.elec,
     label: m => compactPeso(m.elec),
-    tooltip: m => [[m.label], [formatCurrency(m.elec), CHART.accent, true]],
+    tooltip: m => [[m.label], [formatCurrency(m.elec), CHART.elec, true]],
     ariaLabel: 'Singil sa kuryente bawat buwan',
+    color: CHART.elec,
     clickable: false
   });
   renderColumnChart(document.getElementById('tpChartWater'), months, {
@@ -458,7 +459,7 @@ function renderTenantCharts(months) {
     clickable: false
   });
   renderLineChart(document.getElementById('tpChartKwh'), months, [
-    { name: 'kWh', color: CHART.accent, value: m => m.kwh }
+    { name: 'kWh', color: CHART.elec, value: m => m.kwh }
   ], {
     zeroBased: true,
     format: v => Math.round(v).toLocaleString('en-PH') + ' kWh',

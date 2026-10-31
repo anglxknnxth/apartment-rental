@@ -105,6 +105,14 @@ function tenantStats() {
   });
 }
 
+// Kulay ng bawat seksyon ng ranggo (mula sa CHART ng dashboard.js)
+const HL_SECTION_COLORS = {
+  'Mga tenant': CHART.magenta,
+  'Mga buwan': CHART.violet,
+  'Kuryente at tubig': CHART.elec,
+  'Mga kwarto': CHART.accent
+};
+
 // Top N (karaniwang 5), may ranggo; magkapareho ang ranggo ng magkatabla (1, 1, 3…)
 const HL_TOP = 5;
 function rankTop(list, value, lowest = false, limit = HL_TOP) {
@@ -498,6 +506,10 @@ function renderHighlights() {
     heading.innerText = group.section;
     const grid = document.createElement('div');
     grid.className = 'hl-rank-grid';
+    // Kulay ng seksyon (CSS --sec): ginagamit ng guhit sa title, #1, at mga bar
+    const sec = HL_SECTION_COLORS[group.section] || CHART.accent;
+    heading.style.setProperty('--sec', sec);
+    grid.style.setProperty('--sec', sec);
     cards.forEach(l => grid.appendChild(rankCard(l)));
     rankBox.append(heading, grid);
   });
@@ -524,11 +536,11 @@ function renderHighlights() {
     }));
   };
   const top10 = [
-    { title: 'Pinakamalaking konsumo ng kuryente', note: 'Isang tenant sa isang buwan (kWh)',
+    { title: 'Pinakamalaking konsumo ng kuryente', note: 'Isang tenant sa isang buwan (kWh)', color: CHART.elec,
       rows: recordRows(x => numOrNull(x.kwh), v => `${num(v)} kWh`) },
-    { title: 'Pinakamalaking konsumo ng tubig', note: 'Isang tenant sa isang buwan (m³)',
+    { title: 'Pinakamalaking konsumo ng tubig', note: 'Isang tenant sa isang buwan (m³)', color: CHART.water,
       rows: recordRows(x => numOrNull(x.m3), v => `${num(v, 1)} m³`) },
-    { title: 'Pinakamalaking bill (walang renta)', note: 'Kuryente + tubig + internet + others ng isang tenant sa isang buwan',
+    { title: 'Pinakamalaking bill (walang renta)', note: 'Kuryente + tubig + internet + others ng isang tenant sa isang buwan', color: CHART.violet,
       rows: recordRows(x => x.bills, v => formatCurrency(v)) }
   ];
   const top10Grid = document.getElementById('hlTop10');
@@ -539,9 +551,10 @@ function renderHighlights() {
 }
 
 // Isang Top 5 card: pamagat, maikling paliwanag, at listahang may ranggo, value at maliit na bar
-function rankCard({ title, note, rows, all }) {
+function rankCard({ title, note, rows, all, color }) {
   const card = document.createElement('div');
   card.className = 'hl-rank';
+  if (color) card.style.setProperty('--sec', color); // kung wala, kulay ng seksyon (--sec ng grid)
   const head = document.createElement('div');
   head.className = 'hl-rank-head';
   const h = document.createElement('h3');

@@ -38,6 +38,12 @@ I-double-click ang **`Buksan Resibo.bat`**.
 
 Sa screen, pinaliliit ang resibo para kasya sa window, pero buong laki pa rin ang JPEG at PDF.
 
+### Mga kulay (Dashboard, Highlights at Tenants)
+- Teal ang tema ng tatlong tab na ito; blue pa rin ang Receipt tab at ang resibo.
+- **Kuryente = amber (dilaw)** at **Tubig = blue** sa lahat ng graph. Ang mga kwarto ay may sariling kulay (blue, orange, aqua, yellow).
+- May sariling accent ang bawat seksyon: Koleksyon = violet · Mga kwarto = teal · Kuryente at tubig = amber · Mga tenant (Highlights) = magenta. Coral ang pagbaba at nawalang kita.
+- Nasa `CHART` at `BREAKDOWN` sa `dashboard.js` ang mga kulay ng graph, at nasa simula ng `dashboard.css` ang sa CSS (`--c-*`). Na-validate ang mga kulay para sa color-blind.
+
 ### Dashboard
 - Kabuuan ng **lahat ng tenant** para sa isang buwan: Rent, Tubig, Kuryente, Internet/Others at **Total**.
 - **Buwan dropdown:** ang kasalukuyang buwan ang default. Piliin ang **ALL (lahat ng buwan)** para makita ang overall: kabuuan ng lahat ng buwan sa tiles, donut, bawat kwarto at table (may "Ilang buwan" bawat tenant), at lahat ng buwan sa mga graph. Sa ALL, bubuksan ng row sa table ang pinakabagong resibo ng tenant.
