@@ -24,9 +24,7 @@
 .hl-table th { background: var(--brand-dark); color: #fff; font-weight: 500; padding: 10px 12px; text-align: left; white-space: nowrap; }
 .hl-table td { padding: 10px 12px; border-bottom: 1px solid var(--line); white-space: nowrap; }
 .hl-table th:nth-child(n+5), .hl-table td.num { text-align: right; font-variant-numeric: tabular-nums; }
-.hl-table tbody tr { cursor: pointer; }
 .hl-table tbody tr:nth-child(even) { background: #f8fafd; }
-.hl-table tbody tr:hover { background: #e8f0ff; }
 .hl-table tfoot td { background: var(--tint); font-weight: 700; color: var(--brand-dark); border-bottom: none; }
 
 @media (max-width: 600px) {

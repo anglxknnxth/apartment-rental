@@ -54,7 +54,7 @@ Sa screen, pinaliliit ang resibo para kasya sa window, pero buong laki pa rin an
 - Mahahalagang detalye mula sa **lahat** ng data (hindi apektado ng napiling buwan):
   - Pinakamatagal na tenant · pinakabagong tenant · pinakamataas at pinakamababang koleksyon sa isang buwan · average bawat buwan · pinakamalakas sa kuryente at tubig (average bawat buwan, kasama lang ang may ≥3 buwang data) · occupancy (average % at kasalukuyang bakante)
   - Kapag kinlik ang card ng buwan, bubuksan ito sa Dashboard tab. Kapag tenant, bubuksan ang resibo niya.
-- **Lahat ng tenant:** table ng bawat naging tenant (kwarto, mula, hanggang, ilang buwan, kabuuang naibayad, average na bill). I-click ang row para buksan ang pinakabagong resibo.
+- **Lahat ng tenant:** table ng bawat naging tenant (kwarto, mula, hanggang, ilang buwan, kabuuang naibayad, average na bill). Para sa pagtingin lang ito (hindi clickable).
 - Naaalala sa URL: .
 
 ## Google Sheet

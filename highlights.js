@@ -40,7 +40,7 @@ const HL_MIN_MONTHS = 3;
       <div class="card-head">
         <div>
           <h3>Lahat ng tenant</h3>
-          <p class="muted">Ayon sa unang buwan · i-click ang row para buksan ang pinakabagong resibo</p>
+          <p class="muted">Ayon sa unang buwan</p>
         </div>
       </div>
       <div class="hl-table-wrap">
@@ -246,7 +246,6 @@ function renderTenantTable(stats, latest) {
       td.innerText = text;
       tr.appendChild(td);
     });
-    tr.addEventListener('click', () => { showView('receipt'); openTenantMonth(t.name, t.latestLabel); });
     body.appendChild(tr);
   });
 
