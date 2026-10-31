@@ -6,6 +6,7 @@
 //   workbook, currentTenant, tenantSelect, parseSheet, isArchived, roomOf, formatCurrency,
 //   excelDateToFullMonthYear, shortMonthYear, renderColumnChart,
 //   renderLineChart, compactPeso, CHART, showView, VIEWS (renderColumnChart: color/clickable options)
+//   at mula sa highlights.js: highlightRankLists, tenantStats, monthChanges, HL_MIN_MONTHS
 //
 // Nire-render kapag binuksan ang tab ('view-shown') o kapag may bagong data ('workbook-loaded').
 
@@ -45,6 +46,7 @@ let profileTenant = null; // tenant na ipinapakita sa tab na ito
         <a href="#" class="link-more" id="tpOpenReceipts" role="button">Tingnan ang mga resibo →</a>
       </div>
       <div class="summary-tiles" id="tpTiles"></div>
+      <div class="tp-insights" id="tpInsights"></div>
     </div>
 
     <div class="empty-state" id="tpNoBills" hidden>
@@ -224,6 +226,8 @@ function renderTenantProfile() {
     tilesBox.appendChild(tile);
   });
 
+  renderTenantInsights(name, months);
+
   // Walang singil: walang graphs at table
   const hasBills = months.length > 0;
   document.getElementById('tpNoBills').hidden = hasBills;
@@ -233,6 +237,86 @@ function renderTenantProfile() {
 
   renderTenantCharts(months);
   renderTenantTableMonths(months);
+}
+
+// Ranggo sa Highlights, paghahambing sa ibang tenant, at pinakamalaking pagtaas ng bill niya.
+// Gumagamit ng highlightRankLists, tenantStats, monthChanges at HL_MIN_MONTHS mula sa highlights.js.
+function renderTenantInsights(name, months) {
+  const box = document.getElementById('tpInsights');
+  box.innerHTML = '';
+  box.hidden = !months.length;
+  if (!months.length) return;
+
+  const stats = tenantStats();
+  const me = stats.find(t => t.name === name);
+
+  // A) Ranggo: bawat Top 5 na kasama ang tenant sa #1–#3 (kapag kaunti ang tenant, kasama ang lahat
+  //    sa "pinakamalakas" at "pinakamatipid", kaya hindi makabuluhan ang #4–#5)
+  const chips = [];
+  highlightRankLists(stats).forEach(group => group.lists.forEach(list => {
+    const hit = list.rows.find(r => r.tenant === name);
+    if (hit && hit.rank <= 3) chips.push({ rank: hit.rank, title: list.title });
+  }));
+  chips.sort((a, b) => a.rank - b.rank);
+  const rankRow = document.createElement('div');
+  rankRow.className = 'tp-ranks';
+  const rankLabel = document.createElement('span');
+  rankLabel.className = 'tp-insight-label';
+  rankLabel.innerText = 'Ranggo sa Highlights (Top 3)';
+  rankRow.appendChild(rankLabel);
+  if (chips.length) {
+    chips.forEach(c => {
+      const chip = document.createElement('span');
+      chip.className = 'tp-chip' + (c.rank === 1 ? ' first' : '');
+      chip.innerText = `#${c.rank} ${c.title}`;
+      rankRow.appendChild(chip);
+    });
+  } else {
+    const none = document.createElement('span');
+    none.className = 'muted';
+    none.innerText = 'Wala sa Top 3 ng mga listahan';
+    rankRow.appendChild(none);
+  }
+  box.appendChild(rankRow);
+
+  // B) Kumpara sa average ng mga tenant na may ≥HL_MIN_MONTHS buwang data
+  const peerAvg = (key, countKey) => {
+    const peers = stats.filter(t => t[countKey] >= HL_MIN_MONTHS && t[key] != null);
+    return peers.length ? peers.reduce((s, t) => s + t[key], 0) / peers.length : null;
+  };
+  const compare = [
+    ['Average na bill', me.avgBill, peerAvg('avgBill', 'months'), formatCurrency],
+    ['Average kWh', me.avgKwh, peerAvg('avgKwh', 'kwhMonths'), v => `${Math.round(v).toLocaleString('en-PH')} kWh`],
+    ['Average m³', me.avgM3, peerAvg('avgM3', 'm3Months'), v => `${v.toLocaleString('en-PH', { maximumFractionDigits: 1 })} m³`]
+  ];
+  const list = document.createElement('div');
+  list.className = 'tp-compare';
+  const listLabel = document.createElement('span');
+  listLabel.className = 'tp-insight-label';
+  listLabel.innerText = 'Kumpara sa ibang tenant';
+  list.appendChild(listLabel);
+  compare.forEach(([label, mine, avg, fmt]) => {
+    if (mine == null || avg == null || !avg) return;
+    const pct = (mine - avg) / avg * 100;
+    const line = document.createElement('div');
+    const strong = document.createElement('strong');
+    strong.innerText = `${label}: ${fmt(mine)}`;
+    const rest = Math.abs(pct) < 0.5 ? ' · halos kapareho ng average'
+      : ` · ${pct > 0 ? '▲' : '▼'} ${Math.abs(pct).toFixed(0)}% ${pct > 0 ? 'mas mataas' : 'mas mababa'} kaysa average (${fmt(avg)})`;
+    line.append(strong, rest);
+    list.appendChild(line);
+  });
+
+  // C) Pinakamalaking pagtaas ng bill niya (kumpara sa nakaraang buwan)
+  const jump = monthChanges().filter(c => c.name === name && c.diff > 0).sort((a, b) => b.diff - a.diff)[0];
+  if (jump) {
+    const line = document.createElement('div');
+    const strong = document.createElement('strong');
+    strong.innerText = `Pinakamalaking pagtaas: ${shortMonthYear(jump.serial)}`;
+    line.append(strong, ` · ${formatCurrency(jump.prevTotal)} → ${formatCurrency(jump.total)} (+${formatCurrency(jump.diff)}${jump.pct != null ? `, +${jump.pct.toFixed(1)}%` : ''})`);
+    list.appendChild(line);
+  }
+  box.appendChild(list);
 }
 
 function renderTenantCharts(months) {

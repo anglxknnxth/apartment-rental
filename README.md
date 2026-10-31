@@ -53,7 +53,11 @@ Sa screen, pinaliliit ang resibo para kasya sa window, pero buong laki pa rin an
 ### Highlights
 - Mahahalagang detalye mula sa **lahat** ng data (hindi apektado ng napiling buwan). Para sa pagtingin lang ang buong tab; walang clickable dito.
   - **Mga buod:** kabuuang koleksyon · average bawat buwan · occupancy (average % at kasalukuyang bakante) · bilang ng naging tenant
-  - **Top 5** (may ranggo, at bar para makita ang laki): pinakamatagal na tenant · pinakabagong tenant · pinakamataas at pinakamababang koleksyon sa isang buwan · pinakamalakas sa kuryente at tubig (average bawat buwan, kasama lang ang may ≥3 buwang data). Pareho ang ranggo ng magkatabla.
+  - **Top 5**, nakagrupo sa 4 na seksyon (may ranggo at bar; pareho ang ranggo ng magkatabla; kasama lang sa mga average ang may ≥3 buwang data):
+    - **Mga tenant:** pinakamatagal · pinakabago · pinakamalaking naibayad · pinakamataas na average na bill (**lahat ng tenant** ang ipinapakita sa apat na ito, hindi Top 5)
+    - **Mga buwan:** pinakamataas at pinakamababang koleksyon · pinakamalaking pagtaas at pagbaba ng bill (isang tenant, kumpara sa mismong nakaraang buwan niya)
+    - **Kuryente at tubig:** pinakamalakas at pinakamatipid sa kuryente (kWh) at tubig (m³)
+    - **Mga kwarto:** pinakamalaking kita · pinakamatagal na bakante (hindi kasama ang mga buwan bago ang `ROOM_OPENED`) · pinakamaraming naging tenant · pinakamalakas sa kuryente
   - **Top 10 bawat buwan** (isang tenant sa isang buwan, hal. "Kevin Dales · Jun 2026"): pinakamalaking konsumo ng kuryente (kWh) · pinakamalaking konsumo ng tubig (m³) · pinakamalaking bill na walang renta (Total bawas Rent: kuryente + tubig + internet + others)
 - **Lahat ng tenant:** table ng bawat naging tenant (kwarto, mula, hanggang, ilang buwan, kabuuang naibayad, average na bill).
 - Naaalala sa URL: .
@@ -63,6 +67,8 @@ Sa screen, pinaliliit ang resibo para kasya sa window, pero buong laki pa rin an
   - Pangalan, kwarto, active o archived, at kung kailan pumasok (at umalis)
   - 6 na tile: kabuuang naibayad · ilang buwan · average na bill · pinakamataas na bill · average kWh at m³ bawat buwan
   - Mga graph ng lahat ng buwan niya: bill bawat buwan · singil sa kuryente · singil sa tubig (hiwalay, kasi malaki ang agwat ng halaga) · konsumo ng kuryente (kWh) · konsumo ng tubig (m³)
+  - **Ranggo sa Highlights (Top 3):** mga listahan kung saan nasa #1–#3 ang tenant
+  - **Kumpara sa ibang tenant:** average na bill, kWh at m³ (▲/▼ % kumpara sa average), at ang pinakamalaking pagtaas ng bill niya
   - Table ng lahat ng buwan (rent, kuryente, tubig, internet, others, total, remarks) na may total sa ibaba
 - **Tingnan ang mga resibo →** ang tanging clickable dito: bubuksan ang Receipt tab ng tenant na iyon.
 - Naaalala sa URL: `#tenants`.

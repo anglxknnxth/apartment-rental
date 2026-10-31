@@ -31,8 +31,12 @@
 }
 
 /* ---------- Top 5 cards ---------- */
-.hl-rank-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
-@media (min-width: 1100px) { .hl-rank-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } } /* 6 card = 2 pantay na row */
+/* Mga seksyon ng Top 5 (Mga tenant, Mga buwan, …), tig-4 na card: 4 bawat row sa malapad, 2 sa katamtaman, 1 sa cellphone */
+.hl-rank-sections { display: flex; flex-direction: column; gap: 20px; }
+.hl-rank-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+@media (min-width: 700px) { .hl-rank-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 1300px) { .hl-rank-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (min-width: 1100px) { .hl-rank-grid.cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); } } /* Top 10: 3 card */
 .hl-rank { min-width: 0; padding: 18px; border-radius: 14px; background: #fff; box-shadow: var(--card-shadow); }
 .hl-rank-head h3 { margin: 0; font-size: 15px; font-weight: 600; }
 .hl-rank-head p { margin: 2px 0 10px; font-size: 12px; }
