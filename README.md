@@ -51,10 +51,11 @@ Sa screen, pinaliliit ang resibo para kasya sa window, pero buong laki pa rin an
 - I-click ang row para buksan ang resibo ng tenant na iyon sa parehong buwan.
 
 ### Highlights
-- Mahahalagang detalye mula sa **lahat** ng data (hindi apektado ng napiling buwan):
-  - Pinakamatagal na tenant · pinakabagong tenant · pinakamataas at pinakamababang koleksyon sa isang buwan · average bawat buwan · pinakamalakas sa kuryente at tubig (average bawat buwan, kasama lang ang may ≥3 buwang data) · occupancy (average % at kasalukuyang bakante)
-  - Kapag kinlik ang card ng buwan, bubuksan ito sa Dashboard tab. Kapag tenant, bubuksan ang resibo niya.
-- **Lahat ng tenant:** table ng bawat naging tenant (kwarto, mula, hanggang, ilang buwan, kabuuang naibayad, average na bill). Para sa pagtingin lang ito (hindi clickable).
+- Mahahalagang detalye mula sa **lahat** ng data (hindi apektado ng napiling buwan). Para sa pagtingin lang ang buong tab; walang clickable dito.
+  - **Mga buod:** kabuuang koleksyon · average bawat buwan · occupancy (average % at kasalukuyang bakante) · bilang ng naging tenant
+  - **Top 5** (may ranggo, at bar para makita ang laki): pinakamatagal na tenant · pinakabagong tenant · pinakamataas at pinakamababang koleksyon sa isang buwan · pinakamalakas sa kuryente at tubig (average bawat buwan, kasama lang ang may ≥3 buwang data). Pareho ang ranggo ng magkatabla.
+  - **Top 10 bawat buwan** (isang tenant sa isang buwan, hal. "Kevin Dales · Jun 2026"): pinakamalaking konsumo ng kuryente (kWh) · pinakamalaking konsumo ng tubig (m³) · pinakamalaking bill na walang renta (Total bawas Rent: kuryente + tubig + internet + others)
+- **Lahat ng tenant:** table ng bawat naging tenant (kwarto, mula, hanggang, ilang buwan, kabuuang naibayad, average na bill).
 - Naaalala sa URL: .
 
 ## Google Sheet

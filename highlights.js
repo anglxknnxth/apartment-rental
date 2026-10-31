@@ -5,7 +5,7 @@
 // dashboard.js, at gumagamit ng mga global mula sa index.html at dashboard.js:
 //   workbook, parseSheet, isArchived, roomOf, formatCurrency, excelDateToFullMonthYear, shortMonthYear,
 //   tenantSelect, monthlyTotals, occupancyByMonth, allRooms, roomsOpenIn, serialToDate, renderDataNote,
-//   selectSummaryMonth, openTenantMonth, showView, VIEWS
+//   showView, VIEWS
 //
 // Nire-render kapag binuksan ang tab ('view-shown') o kapag may bagong data ('workbook-loaded').
 
@@ -36,6 +36,9 @@ const HL_MIN_MONTHS = 3;
       <p class="data-note" id="hlNote"></p>
     </div>
     <div class="hl-grid" id="hlCards"></div>
+    <div class="hl-rank-grid" id="hlRanks"></div>
+    <h2 class="section-title">Top 10 bawat buwan</h2>
+    <div class="hl-rank-grid" id="hlTop10"></div>
     <div class="card">
       <div class="card-head">
         <div>
@@ -93,24 +96,24 @@ function tenantStats() {
   });
 }
 
-// Lahat ng may pinakamataas (o pinakamababa) na value; kasama ang mga tabla
-function topBy(list, value, lowest = false) {
-  const vals = list.map(value).filter(v => v != null);
-  if (!vals.length) return [];
-  const best = lowest ? Math.min(...vals) : Math.max(...vals);
-  return list.filter(x => value(x) === best);
+// Top N (karaniwang 5), may ranggo; magkapareho ang ranggo ng magkatabla (1, 1, 3…)
+const HL_TOP = 5;
+function rankTop(list, value, lowest = false, limit = HL_TOP) {
+  const sorted = list.filter(x => value(x) != null)
+    .sort((a, b) => (lowest ? value(a) - value(b) : value(b) - value(a)));
+  let rank = 0, prev = null;
+  return sorted.slice(0, limit).map((item, i) => {
+    if (value(item) !== prev) { rank = i + 1; prev = value(item); }
+    return { item, rank };
+  });
 }
-
-const joinNames = list => list.length > 1
-  ? `${list.slice(0, -1).join(', ')} at ${list[list.length - 1]}`
-  : (list[0] || '');
 
 // ---------- Render ----------
 
 function renderHighlights() {
   const hasData = !!workbook;
   document.getElementById('hlEmpty').hidden = hasData;
-  document.querySelectorAll('#viewHighlights > .card, #hlCards').forEach(el => { el.hidden = !hasData; });
+  document.querySelectorAll('#viewHighlights > .card, #viewHighlights > .section-title, #hlCards, #hlRanks, #hlTop10').forEach(el => { el.hidden = !hasData; });
   if (!hasData) return;
 
   renderDataNote(true, document.getElementById('hlNote'));
@@ -120,72 +123,18 @@ function renderHighlights() {
   const rooms = allRooms();
   const occ = occupancyByMonth();
   const latest = months[months.length - 1];
-  const openTenant = t => () => { showView('receipt'); openTenantMonth(t.name, t.latestLabel); };
-  const openMonth = label => () => { showView('summary'); selectSummaryMonth(label); };
   const tenantLine = t => [t.room ? `Room ${t.room}` : null, t.archived ? 'archived' : 'active'].filter(Boolean).join(' · ');
+  const num = (v, digits = 0) => v.toLocaleString('en-PH', { maximumFractionDigits: digits });
 
+  // ---- Mga iisang halaga (stat cards) ----
   const cards = [];
-
-  // 1) Pinakamatagal na tenant (pinakamaraming buwang may singil)
-  const longest = topBy(stats.filter(t => t.months >= HL_MIN_MONTHS), t => t.months);
-  if (longest.length) {
-    const t = longest[0];
-    cards.push({
-      label: 'Pinakamatagal na tenant', value: `${joinNames(longest.map(x => x.name))} · ${t.months} buwan`,
-      detail: longest.length === 1
-        ? `${tenantLine(t)} · mula ${shortMonthYear(t.firstSerial)}${t.archived ? ' hanggang ' + shortMonthYear(t.lastSerial) : ''}`
-        : `${t.months} buwan bawat isa`,
-      onClick: longest.length === 1 ? openTenant(t) : null
-    });
-  }
-
-  // 2) Pinakabagong tenant (pinakahuling unang buwan, may singil man o wala pa)
-  const newest = topBy(stats.filter(t => t.firstSerial != null), t => t.firstSerial);
-  if (newest.length) {
-    const t = newest[0];
-    cards.push({
-      label: 'Pinakabagong tenant', value: joinNames(newest.map(x => x.name)),
-      detail: `${newest.length === 1 ? tenantLine(t) + ' · ' : ''}nagsimula noong ${shortMonthYear(t.firstSerial)}`,
-      onClick: newest.length === 1 ? openTenant(t) : null
-    });
-  }
-
-  // 3–5) Record, pinakamababa, at average na koleksyon bawat buwan
   if (months.length) {
-    const high = topBy(months, m => m.total)[0];
-    const low = topBy(months, m => m.total, true)[0];
-    const avg = months.reduce((s, m) => s + m.total, 0) / months.length;
-    cards.push({ label: 'Pinakamataas na koleksyon', value: formatCurrency(high.total), detail: high.label, onClick: openMonth(high.label) });
-    cards.push({ label: 'Pinakamababang koleksyon', value: formatCurrency(low.total), detail: low.label, onClick: openMonth(low.label) });
-    cards.push({
-      label: 'Average bawat buwan', value: formatCurrency(avg),
-      detail: `${months.length} buwan (${shortMonthYear(months[0].serial)} – ${shortMonthYear(latest.serial)})`
-    });
+    const total = months.reduce((s, m) => s + m.total, 0);
+    const span = `${shortMonthYear(months[0].serial)} – ${shortMonthYear(latest.serial)}`;
+    cards.push({ label: 'Kabuuang koleksyon', value: formatCurrency(total), detail: `${months.length} buwan (${span})` });
+    cards.push({ label: 'Average bawat buwan', value: formatCurrency(total / months.length), detail: span });
   }
-
-  // 6–7) Pinakamalakas sa kuryente at tubig (average bawat buwan)
-  const topKwh = topBy(stats.filter(t => t.kwhMonths >= HL_MIN_MONTHS), t => t.avgKwh);
-  if (topKwh.length) {
-    const t = topKwh[0];
-    const record = topBy(stats.filter(x => x.maxKwh), x => x.maxKwh.value)[0];
-    cards.push({
-      label: 'Pinakamalakas sa kuryente', value: joinNames(topKwh.map(x => x.name)),
-      detail: `~${Math.round(t.avgKwh).toLocaleString('en-PH')} kWh/buwan · record: ${Math.round(record.maxKwh.value).toLocaleString('en-PH')} kWh (${record.name}, ${record.maxKwh.label})`,
-      onClick: topKwh.length === 1 ? openTenant(t) : null
-    });
-  }
-  const topM3 = topBy(stats.filter(t => t.m3Months >= HL_MIN_MONTHS), t => t.avgM3);
-  if (topM3.length) {
-    const t = topM3[0];
-    cards.push({
-      label: 'Pinakamalakas sa tubig', value: joinNames(topM3.map(x => x.name)),
-      detail: `~${t.avgM3.toLocaleString('en-PH', { maximumFractionDigits: 1 })} m³/buwan · ${tenantLine(t)}`,
-      onClick: topM3.length === 1 ? openTenant(t) : null
-    });
-  }
-
-  // 8) Occupancy: average na % ng mga kwartong may nakatira, at ang kasalukuyan.
-  // Ang mga kwartong bukas na lang sa bawat buwan ang binibilang (ROOM_OPENED sa dashboard.js).
+  // Occupancy: ang mga kwartong bukas na lang sa bawat buwan ang binibilang (ROOM_OPENED sa dashboard.js)
   if (rooms.length && months.length) {
     const occupiedIn = m => roomsOpenIn(m.label).filter(r => (occ.get(m.label) || new Set()).has(r));
     const pct = m => occupiedIn(m).length / (roomsOpenIn(m.label).length || 1) * 100;
@@ -198,13 +147,15 @@ function renderHighlights() {
       detail: `Ngayong ${shortMonthYear(latest.serial)}: ${now.length}/${openNow.length} · ${vacant.length ? 'Bakante: ' + vacant.map(r => 'Room ' + r).join(', ') : 'walang bakante'}`
     });
   }
+  const tenants = stats.filter(t => t.firstSerial != null);
+  const activeCount = tenants.filter(t => !t.archived).length;
+  cards.push({ label: 'Mga naging tenant', value: String(tenants.length), detail: `${activeCount} active · ${tenants.length - activeCount} archived` });
 
   const grid = document.getElementById('hlCards');
   grid.innerHTML = '';
   cards.forEach(c => {
-    const card = document.createElement(c.onClick ? 'button' : 'div');
-    card.className = 'hl-card' + (c.onClick ? ' clickable' : '');
-    if (c.onClick) { card.type = 'button'; card.addEventListener('click', c.onClick); }
+    const card = document.createElement('div');
+    card.className = 'hl-card';
     ['hl-label', 'hl-value', 'hl-detail'].forEach((cls, k) => {
       const el = document.createElement('span');
       el.className = cls;
@@ -214,7 +165,132 @@ function renderHighlights() {
     grid.appendChild(card);
   });
 
+  // ---- Top 5 ----
+  // bar: value / pinakamalaki sa listahan (null = walang bar, hal. petsa)
+  const ranks = [];
+  const withBars = (list, value) => {
+    const max = Math.max(...list.map(r => value(r.item)), 0);
+    return r => (max > 0 ? value(r.item) / max : null);
+  };
+
+  const longest = rankTop(stats.filter(t => t.months > 0), t => t.months);
+  const longestBar = withBars(longest, t => t.months);
+  ranks.push({
+    title: 'Pinakamatagal na tenant', note: 'Ayon sa dami ng buwang may singil',
+    rows: longest.map(r => ({ rank: r.rank, name: r.item.name, value: `${r.item.months} buwan`, bar: longestBar(r),
+      sub: `${tenantLine(r.item)} · mula ${shortMonthYear(r.item.firstSerial)}` }))
+  });
+
+  const newest = rankTop(tenants, t => t.firstSerial);
+  ranks.push({
+    title: 'Pinakabagong tenant', note: 'Ayon sa unang buwan sa sheet',
+    rows: newest.map(r => ({ rank: r.rank, name: r.item.name, value: shortMonthYear(r.item.firstSerial), bar: null, sub: tenantLine(r.item) }))
+  });
+
+  const high = rankTop(months, m => m.total);
+  const highBar = withBars(high, m => m.total);
+  ranks.push({
+    title: 'Pinakamataas na koleksyon', note: 'Kabuuan ng lahat ng tenant sa isang buwan',
+    rows: high.map(r => ({ rank: r.rank, name: shortMonthYear(r.item.serial), value: formatCurrency(r.item.total), bar: highBar(r),
+      sub: `${r.item.tenantCount} ${r.item.tenantCount === 1 ? 'tenant' : 'tenants'}` }))
+  });
+
+  const low = rankTop(months, m => m.total, true);
+  const lowBar = withBars(low, m => m.total);
+  ranks.push({
+    title: 'Pinakamababang koleksyon', note: 'Kabuuan ng lahat ng tenant sa isang buwan',
+    rows: low.map(r => ({ rank: r.rank, name: shortMonthYear(r.item.serial), value: formatCurrency(r.item.total), bar: lowBar(r),
+      sub: `${r.item.tenantCount} ${r.item.tenantCount === 1 ? 'tenant' : 'tenants'}` }))
+  });
+
+  const kwh = rankTop(stats.filter(t => t.kwhMonths >= HL_MIN_MONTHS), t => t.avgKwh);
+  const kwhBar = withBars(kwh, t => t.avgKwh);
+  ranks.push({
+    title: 'Pinakamalakas sa kuryente', note: `Average na kWh bawat buwan (may ≥${HL_MIN_MONTHS} buwang data)`,
+    rows: kwh.map(r => ({ rank: r.rank, name: r.item.name, value: `${num(r.item.avgKwh)} kWh`, bar: kwhBar(r),
+      sub: `${tenantLine(r.item)}${r.item.maxKwh ? ` · record ${num(r.item.maxKwh.value)} kWh` : ''}` }))
+  });
+
+  const m3 = rankTop(stats.filter(t => t.m3Months >= HL_MIN_MONTHS), t => t.avgM3);
+  const m3Bar = withBars(m3, t => t.avgM3);
+  ranks.push({
+    title: 'Pinakamalakas sa tubig', note: `Average na m³ bawat buwan (may ≥${HL_MIN_MONTHS} buwang data)`,
+    rows: m3.map(r => ({ rank: r.rank, name: r.item.name, value: `${num(r.item.avgM3, 1)} m³`, bar: m3Bar(r), sub: tenantLine(r.item) }))
+  });
+
+  const rankGrid = document.getElementById('hlRanks');
+  rankGrid.innerHTML = '';
+  ranks.filter(r => r.rows.length).forEach(r => rankGrid.appendChild(rankCard(r)));
+
+  // ---- Top 10 bawat buwan: isang tenant sa isang buwan (hal. Kevin Dales · Apr 2026) ----
+  const records = [];
+  workbook.SheetNames.forEach((name, i) => {
+    const room = roomOf(name), archived = isArchived(i);
+    parseSheet(name).data.forEach(r => {
+      if (r && typeof r[0] === 'number' && typeof r[18] === 'number') {
+        records.push({ name, room, archived, serial: r[0], kwh: r[4], m3: r[11], total: r[18],
+          // Bill na walang renta: Total (S) bawas ang Rent (B) = kuryente + tubig + internet + others
+          bills: r[18] - (typeof r[1] === 'number' ? r[1] : 0) });
+      }
+    });
+  });
+  const numOrNull = v => (typeof v === 'number' ? v : null);
+  const recordRows = (value, format) => {
+    const top = rankTop(records, value, false, 10);
+    const bar = withBars(top, value);
+    return top.map(r => ({
+      rank: r.rank, name: r.item.name, value: format(value(r.item)), bar: bar(r),
+      sub: [shortMonthYear(r.item.serial), r.item.room ? `Room ${r.item.room}` : null].filter(Boolean).join(' · ')
+    }));
+  };
+  const top10 = [
+    { title: 'Pinakamalaking konsumo ng kuryente', note: 'Isang tenant sa isang buwan (kWh)',
+      rows: recordRows(x => numOrNull(x.kwh), v => `${num(v)} kWh`) },
+    { title: 'Pinakamalaking konsumo ng tubig', note: 'Isang tenant sa isang buwan (m³)',
+      rows: recordRows(x => numOrNull(x.m3), v => `${num(v, 1)} m³`) },
+    { title: 'Pinakamalaking bill (walang renta)', note: 'Kuryente + tubig + internet + others ng isang tenant sa isang buwan',
+      rows: recordRows(x => x.bills, v => formatCurrency(v)) }
+  ];
+  const top10Grid = document.getElementById('hlTop10');
+  top10Grid.innerHTML = '';
+  top10.filter(r => r.rows.length).forEach(r => top10Grid.appendChild(rankCard(r)));
+
   renderTenantTable(stats, latest);
+}
+
+// Isang Top 5 card: pamagat, maikling paliwanag, at listahang may ranggo, value at maliit na bar
+function rankCard({ title, note, rows }) {
+  const card = document.createElement('div');
+  card.className = 'hl-rank';
+  const head = document.createElement('div');
+  head.className = 'hl-rank-head';
+  const h = document.createElement('h3');
+  h.innerText = `Top ${rows.length}: ${title}`;
+  const p = document.createElement('p');
+  p.className = 'muted';
+  p.innerText = note;
+  head.append(h, p);
+  const list = document.createElement('ol');
+  list.className = 'hl-rank-list';
+  rows.forEach(row => {
+    const li = document.createElement('li');
+    if (row.rank === 1) li.className = 'first';
+    li.innerHTML = '<span class="rank-no"></span><div class="rank-main"><span class="rank-name"></span><span class="rank-sub"></span></div><span class="rank-value"></span>';
+    li.querySelector('.rank-no').innerText = row.rank;
+    li.querySelector('.rank-name').innerText = row.name;
+    li.querySelector('.rank-sub').innerText = row.sub;
+    li.querySelector('.rank-value').innerText = row.value;
+    if (row.bar != null) {
+      const bar = document.createElement('span');
+      bar.className = 'rank-bar';
+      bar.innerHTML = '<i></i>';
+      bar.firstChild.style.width = Math.max(2, row.bar * 100) + '%';
+      li.querySelector('.rank-main').appendChild(bar);
+    }
+    list.appendChild(li);
+  });
+  card.append(head, list);
+  return card;
 }
 
 // "Lahat ng tenant" table, ayon sa unang buwan
