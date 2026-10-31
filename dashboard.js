@@ -1039,7 +1039,7 @@ function renderTotalsChart(container, months, selectedLabel) {
 }
 
 // Generic na column chart, isang series; naka-highlight ang napiling buwan, i-click para piliin ang buwan.
-// o: { value, scale?, tick?, selectedLabel, label (sa ibabaw ng napili), tooltip (lines), ariaLabel }
+// o: { value, scale?, tick?, selectedLabel, label (sa ibabaw ng napili), tooltip (lines), ariaLabel, clickable?, color?, softColor? }
 function renderColumnChart(container, months, o) {
   container.querySelectorAll('svg').forEach(s => s.remove());
   const width = container.clientWidth, height = CHART.height;
@@ -1063,7 +1063,8 @@ function renderColumnChart(container, months, o) {
     if (h > 0) {
       svgEl('path', {
         d: `M${x},${base} V${top + r} Q${x},${top} ${x + r},${top} H${x + barW - r} Q${x + barW},${top} ${x + barW},${top + r} V${base} Z`,
-        fill: selected || !o.selectedLabel ? CHART.accent : CHART.soft // walang napili (ALL): lahat naka-accent
+        // walang napili (ALL): lahat naka-accent; o.color para sa ibang kulay (hal. orange sa tubig)
+        fill: selected || !o.selectedLabel ? (o.color || CHART.accent) : (o.softColor || CHART.soft)
       }, svg);
     }
     if (selected) {
@@ -1072,10 +1073,10 @@ function renderColumnChart(container, months, o) {
     }
     // Mas malaking hit target kaysa sa column
     const hit = svgEl('rect', { x: margin.left + band * i, y: margin.top, width: band, height: base - margin.top,
-      fill: 'transparent', style: 'cursor:pointer' }, svg);
+      fill: 'transparent', style: o.clickable === false ? '' : 'cursor:pointer' }, svg);
     hit.addEventListener('mouseenter', () => tip.show(o.tooltip(m), xCenter(i), top));
     hit.addEventListener('mouseleave', () => tip.hide());
-    hit.addEventListener('click', () => selectSummaryMonth(m.label));
+    if (o.clickable !== false) hit.addEventListener('click', () => selectSummaryMonth(m.label));
   });
   xLabels(svg, months, xCenter, height, band);
 }

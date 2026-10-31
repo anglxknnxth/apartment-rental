@@ -58,6 +58,15 @@ Sa screen, pinaliliit ang resibo para kasya sa window, pero buong laki pa rin an
 - **Lahat ng tenant:** table ng bawat naging tenant (kwarto, mula, hanggang, ilang buwan, kabuuang naibayad, average na bill).
 - Naaalala sa URL: .
 
+### Tenants
+- Profile ng isang tenant (piliin sa dropdown; default ang tenant sa Receipt tab):
+  - Pangalan, kwarto, active o archived, at kung kailan pumasok (at umalis)
+  - 6 na tile: kabuuang naibayad · ilang buwan · average na bill · pinakamataas na bill · average kWh at m³ bawat buwan
+  - Mga graph ng lahat ng buwan niya: bill bawat buwan · singil sa kuryente · singil sa tubig (hiwalay, kasi malaki ang agwat ng halaga) · konsumo ng kuryente (kWh) · konsumo ng tubig (m³)
+  - Table ng lahat ng buwan (rent, kuryente, tubig, internet, others, total, remarks) na may total sa ibaba
+- **Tingnan ang mga resibo →** ang tanging clickable dito: bubuksan ang Receipt tab ng tenant na iyon.
+- Naaalala sa URL: `#tenants`.
+
 ## Google Sheet
 
 - **Isang tab = isang tenant.** Ang pangalan ng tab ang lalabas sa resibo at ang gagamiting pangalan ng folder.
@@ -92,6 +101,8 @@ Sa screen, pinaliliit ang resibo para kasya sa window, pero buong laki pa rin an
 | `dashboard.css` | Styles ng Dashboard tab at ng mga tab sa itaas |
 | `highlights.js` | Highlights tab: gumagawa ng sariling tab at section, at ng lahat ng kuwenta |
 | `highlights.css` | Styles ng Highlights tab |
+| `tenants.js` | Tenants tab: gumagawa ng sariling tab at section, at ng profile ng bawat tenant |
+| `tenants.css` | Styles ng Tenants tab |
 | `favicon.ico` | Icon sa browser tab (ang logo, 16/32/48 px) |
 | `serve.ps1` | Local server at pag-save sa folder ng tenant |
 | `Buksan Resibo.bat` | Pinapatakbo ang `serve.ps1` |

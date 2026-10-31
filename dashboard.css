@@ -73,7 +73,7 @@
 @media (max-width: 600px) {
   .app-header { flex-wrap: wrap; }
   .view-tabs { margin-left: 0; width: 100%; }
-  .view-tab { flex: 1; }
+  .view-tab { flex: 1; min-width: 0; padding: 8px 4px; font-size: 13px; } /* kasya ang 4+ na tab */
   .summary-month { flex: 1 1 100%; min-width: 0; }
   .summary-tile { padding: 12px; }
   .summary-tile strong { font-size: 17px; }
