@@ -89,6 +89,16 @@ while ($listener.IsListening) {
   $ctx = $listener.GetContext()
   $res = $ctx.Response
   try {
+    # GET /__version: pinakabagong oras ng pagbabago ng code (para sa auto-reload ng page)
+    if ($ctx.Request.Url.AbsolutePath -eq '/__version') {
+      $latest = Get-ChildItem -LiteralPath $root -File |
+        Where-Object { '.html', '.js', '.css', '.ico' -contains $_.Extension.ToLower() } |
+        Measure-Object -Property LastWriteTimeUtc -Maximum
+      $res.Headers.Add('Cache-Control', 'no-store')
+      Send-Json $res 200 ('{"version":"' + $latest.Maximum.Ticks + '"}')
+      continue
+    }
+
     if ($ctx.Request.Url.AbsolutePath -eq '/save') {
       if ($ctx.Request.HttpMethod -eq 'POST') { Save-Receipt $ctx.Request $res } else { $res.StatusCode = 405 }
       continue

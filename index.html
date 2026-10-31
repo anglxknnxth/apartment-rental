@@ -27,6 +27,8 @@
     [hidden] { display: none !important; }
     .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 20; max-width: calc(100% - 32px); padding: 12px 18px; border-radius: 10px; background: var(--ink); color: #fff; font-size: 14px; box-shadow: 0 8px 24px rgba(16, 32, 64, .25); }
     .toast.error { background: #c62828; }
+    /* Laging may espasyo para sa scrollbar: hindi gagalaw ang header kapag lumipat sa mas mahabang tab */
+    html { scrollbar-gutter: stable; }
     body { font-family: 'Poppins', sans-serif; background: var(--page); color: var(--ink); margin: 0; }
     button, select, input { font-family: inherit; }
 
@@ -37,7 +39,7 @@
     .app-header h1 { margin: 0; font-size: 22px; font-weight: 700; color: var(--brand-dark); }
     .app-header p { margin: 2px 0 0; font-size: 13px; color: var(--muted); }
 
-    /* steps sa kaliwa, Copy/Download sa kanan (kapantay ng lapad ng resibo); nakadikit sa itaas habang nag-i-scroll */
+    /* steps lang; nakadikit sa itaas habang nag-i-scroll */
     .topbar { position: sticky; top: 0; z-index: 5; display: grid; grid-template-columns: 1fr; gap: 12px 24px; align-items: center; margin: 0 -20px 14px; padding: 10px 20px; background: var(--page); }
     @media (min-width: 1100px) { .topbar { grid-template-columns: minmax(0, 1fr) 680px; } }
     .steps { list-style: none; display: flex; flex-wrap: wrap; gap: 8px 22px; padding: 0; margin: 0; }
@@ -113,7 +115,7 @@
 
     /* ---------- Receipt column ---------- */
     /* kasing-lapad ng (pinaliit na) resibo para pantay ang Download sa kanang gilid nito; width galing sa fitReceipt() */
-    .receipt-toolbar { display: flex; justify-content: flex-end; align-items: center; gap: 12px; width: 100%; justify-self: center; }
+    .receipt-toolbar { display: flex; margin: 0 auto; justify-content: flex-end; align-items: center; gap: 12px; width: 100%; justify-self: center; }
     .receipt-toolbar button { height: 42px; box-sizing: border-box; white-space: nowrap; }
     .toolbar-right { display: flex; gap: 8px; }
 
@@ -207,21 +209,7 @@
       <li data-step="2"><span>2</span>Pumili ng tenant at buwan</li>
       <li data-step="3"><span>3</span>I-download ang resibo</li>
     </ol>
-
-    <div class="receipt-toolbar" id="receiptToolbar" style="visibility:hidden">
-      <div class="toolbar-right">
-        <button id="copyBtn" class="btn-ghost" title="Kopyahin ang resibo para i-paste sa Messenger/Viber">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-          Copy
-        </button>
-        <button id="downloadBtn" class="btn-primary" style="display:none;">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
-          Download<span class="hide-sm" style="margin-left:-4px">as JPEG</span>
-        </button>
-      </div>
-    </div>
   </div>
-
   <main class="layout">
     <section class="col-left">
 
@@ -347,6 +335,20 @@
         </div>
         </div>
       </div>
+      </div>
+
+      <!-- Copy / Download, sa ilalim ng resibo -->
+      <div class="receipt-toolbar" id="receiptToolbar" hidden>
+        <div class="toolbar-right">
+          <button id="copyBtn" class="btn-ghost" title="Kopyahin ang resibo para i-paste sa Messenger/Viber">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            Copy
+          </button>
+          <button id="downloadBtn" class="btn-primary" style="display:none;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+            Download<span class="hide-sm" style="margin-left:-4px">as JPEG</span>
+          </button>
+        </div>
       </div>
     </section>
   </main>
@@ -541,8 +543,8 @@ function setStep(n) {
 // Ipakita ang toolbar o empty state depende kung nakikita ang resibo
 function syncReceiptView() {
   const shown = document.getElementById('receipt').style.display === 'block';
-  // visibility (hindi hidden) para nakareserba ang espasyo: hindi gagalaw ang layout kapag lumabas ang Copy/Download
-  document.getElementById('receiptToolbar').style.visibility = shown ? '' : 'hidden';
+  // Nasa ilalim ng resibo ang Copy/Download, kaya walang gagalaw sa itaas kapag lumabas sila
+  document.getElementById('receiptToolbar').hidden = !shown;
   document.getElementById('emptyState').hidden = shown;
   setStep(shown ? 3 : (workbook ? 2 : 1));
   fitLeftColumn(); // nagbabago ang taas ng topbar kapag lumabas/nawala ang Copy/Download
@@ -561,7 +563,9 @@ function fitReceipt() {
   if (window.innerWidth >= 1100) {
     // Desktop (magkatabing column): kasya rin sa taas ng window para hindi na mag-scroll
     const top = fit.getBoundingClientRect().top + window.scrollY;
-    const available = window.innerHeight - top - 18; // may kaunting allowance para sa rounding ng zoom
+    // Espasyo para sa Copy/Download sa ilalim (taas ng toolbar + 20px na gap ng column)
+    const toolbarSpace = document.getElementById('receiptToolbar').offsetHeight + 20;
+    const available = window.innerHeight - top - toolbarSpace - 18; // may kaunting allowance para sa rounding ng zoom
     scale = Math.min(scale, Math.max(0.5, available / receipt.offsetHeight));
   }
   fit.style.zoom = scale;
@@ -1103,6 +1107,52 @@ function showToast(message, isError = false) {
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => { toast.hidden = true; }, isError ? 6000 : 3000);
 }
+
+// ---------- Auto-reload kapag may bagong code (sa Buksan Resibo.bat / localhost lang) ----------
+// Tinitingnan ng page ang /__version ng serve.ps1 bawat 2 segundo. Kapag nagbago ang code,
+// tinatandaan ang napiling tenant, buwan at tab, tapos nire-reload ang page.
+const RELOAD_STATE_KEY = 'rentReloadState';
+
+function watchForCodeUpdates() {
+  if (!['localhost', '127.0.0.1'].includes(location.hostname)) return;
+  let current = null;
+  const timer = setInterval(async () => {
+    try {
+      const res = await fetch('/__version', { cache: 'no-store' });
+      if (!res.ok) { clearInterval(timer); return; } // lumang serve.ps1: walang /__version
+      const { version } = await res.json();
+      if (current === null) { current = version; return; }
+      if (version !== current) {
+        clearInterval(timer);
+        try {
+          const row = sheetData.data && sheetData.data[parseInt(monthSelect.value)];
+          sessionStorage.setItem(RELOAD_STATE_KEY, JSON.stringify({
+            tenant: currentTenant,
+            month: row ? excelDateToFullMonthYear(row[0]) : null
+          }));
+        } catch (e) { /* ok lang kung hindi ma-save */ }
+        location.reload();
+      }
+    } catch (e) { /* server sarado o offline: subukan ulit sa susunod */ }
+  }, 2000);
+}
+
+// Ibalik ang tenant at buwan pagkatapos ng auto-reload (ang tab ay nasa #koleksyon na ng URL)
+function restoreReloadState() {
+  let state = null;
+  try {
+    state = JSON.parse(sessionStorage.getItem(RELOAD_STATE_KEY) || 'null');
+    sessionStorage.removeItem(RELOAD_STATE_KEY);
+  } catch (e) { return; }
+  if (!state || !state.tenant || !workbook.SheetNames.includes(state.tenant)) return;
+  tenantSelect.value = state.tenant;
+  tenantSelect.dispatchEvent(new Event('change'));
+  const index = sheetData.data.findIndex(r => r && typeof r[0] === 'number' && excelDateToFullMonthYear(r[0]) === state.month);
+  if (index >= 0) selectMonth(index);
+}
+document.addEventListener('workbook-loaded', restoreReloadState, { once: true });
+
+watchForCodeUpdates();
 
 // Kusang kunin ang data pagbukas ng page
 loadFromGoogleSheet();
