@@ -17,6 +17,7 @@ I-double-click ang **`Buksan Resibo.bat`**.
 2. **`serve.ps1`**:
    - Nagbubukas ng local server sa `http://localhost:<port>/`. Ang computer mo lang ang may access.
    - Nagbibigay lang ng mga file na nasa loob ng Rent folder.
+   - May `GET /__version` (pinakabagong oras ng pagbabago ng `.html`/`.js`/`.css`/`.ico`). Tinitingnan ito ng page bawat 2 segundo, at **kusang nagre-reload ang page kapag may bagong code**, habang ibinabalik ang napiling tenant, buwan at tab.
    - Tumatanggap ng `POST /save` para i-save ang JPEG o PDF sa `Rent/<pangalan ng tenant>/` (tingnan sa ibaba).
    - Binubuksan ang browser.
 3. **`index.html`** pagka-load:
@@ -49,6 +50,13 @@ Sa screen, pinaliliit ang resibo para kasya sa window, pero buong laki pa rin an
 - May table ng bawat tenant, kasama ang Remarks. Kasama ang mga archived na tenant sa mga buwang umuupa pa sila.
 - I-click ang row para buksan ang resibo ng tenant na iyon sa parehong buwan.
 
+### Highlights
+- Mahahalagang detalye mula sa **lahat** ng data (hindi apektado ng napiling buwan):
+  - Pinakamatagal na tenant · pinakabagong tenant · pinakamataas at pinakamababang koleksyon sa isang buwan · average bawat buwan · pinakamalakas sa kuryente at tubig (average bawat buwan, kasama lang ang may ≥3 buwang data) · occupancy (average % at kasalukuyang bakante)
+  - Kapag kinlik ang card ng buwan, bubuksan ito sa Koleksyon tab. Kapag tenant, bubuksan ang resibo niya.
+- **Lahat ng tenant:** table ng bawat naging tenant (kwarto, mula, hanggang, ilang buwan, kabuuang naibayad, average na bill). I-click ang row para buksan ang pinakabagong resibo.
+- Naaalala sa URL: .
+
 ## Google Sheet
 
 - **Isang tab = isang tenant.** Ang pangalan ng tab ang lalabas sa resibo at ang gagamiting pangalan ng folder.
@@ -79,6 +87,8 @@ Sa screen, pinaliliit ang resibo para kasya sa window, pero buong laki pa rin an
 | `index.html` | Ang app at ang Resibo tab. Naka-embed na ang logo. |
 | `koleksyon.js` | Logic ng Koleksyon tab at ng paglipat ng tab |
 | `koleksyon.css` | Styles ng Koleksyon tab at ng mga tab sa itaas |
+| `highlights.js` | Highlights tab: gumagawa ng sariling tab at section, at ng lahat ng kuwenta |
+| `highlights.css` | Styles ng Highlights tab |
 | `favicon.ico` | Icon sa browser tab (ang logo, 16/32/48 px) |
 | `serve.ps1` | Local server at pag-save sa folder ng tenant |
 | `Buksan Resibo.bat` | Pinapatakbo ang `serve.ps1` |

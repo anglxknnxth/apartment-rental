@@ -57,10 +57,10 @@ function renderSummary() {
 }
 
 // Paalala sa itaas ng mga tile: kulang ang data bago ang unang buwan sa sheet
-function renderDataNote(isAll) {
+// note: kung saan ilalagay (default: ang nasa Koleksyon tab; ginagamit din ng highlights.js)
+function renderDataNote(isAll, note = document.getElementById('dataNote')) {
   const months = collectionMonths();
   const first = months[months.length - 1];
-  const note = document.getElementById('dataNote');
   const b = text => { const s = document.createElement('strong'); s.innerText = text; return s; };
   note.innerHTML = '';
   const names = MISSING_TENANTS.length > 1
@@ -1075,27 +1075,36 @@ document.getElementById('summaryMonthSelect').addEventListener('change', functio
   renderSummaryMonth(this.value);
 });
 
-// Paglipat ng tab (naaalala sa URL: #koleksyon)
+// Paglipat ng tab. Puwedeng magdagdag ng tab ang ibang file: VIEWS.<view> = '<id ng section>'.
+// Naaalala sa URL: #koleksyon para sa summary, #<view> para sa iba, wala para sa Resibo.
+const VIEWS = { receipt: 'viewReceipt', summary: 'viewSummary' };
+const VIEW_HASH = { summary: 'koleksyon' };
+
 function showView(view) {
-  const isSummary = view === 'summary';
-  document.getElementById('viewReceipt').hidden = isSummary;
-  document.getElementById('viewSummary').hidden = !isSummary;
+  if (!VIEWS[view]) view = 'receipt';
+  Object.entries(VIEWS).forEach(([v, id]) => {
+    const el = document.getElementById(id);
+    if (el) el.hidden = v !== view;
+  });
   document.querySelectorAll('.view-tab').forEach(tab => {
     const active = tab.dataset.view === view;
     tab.classList.toggle('active', active);
     tab.setAttribute('aria-selected', active);
   });
-  history.replaceState(null, '', isSummary ? '#koleksyon' : location.pathname + location.search);
-  if (isSummary) {
-    renderSummary();
-  } else {
+  history.replaceState(null, '', view === 'receipt' ? location.pathname + location.search : '#' + (VIEW_HASH[view] || view));
+  if (view === 'summary') renderSummary();
+  if (view === 'receipt') {
     fitLeftColumn();
     fitReceipt();
   }
+  // Para sa ibang tab (hal. highlights.js) na kailangang mag-render kapag binuksan
+  document.dispatchEvent(new CustomEvent('view-shown', { detail: view }));
 }
 
-document.querySelectorAll('.view-tab').forEach(tab => {
-  tab.addEventListener('click', () => showView(tab.dataset.view));
+// Iisang listener para sa lahat ng tab, pati sa mga idinagdag ng ibang file
+document.querySelector('.view-tabs').addEventListener('click', e => {
+  const tab = e.target.closest('.view-tab');
+  if (tab) showView(tab.dataset.view);
 });
 
 // Lumipat sa ibang tenant pero manatili sa parehong buwan
