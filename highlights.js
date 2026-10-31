@@ -75,6 +75,10 @@ function tenantStats() {
     const m3 = billed.filter(r => typeof r[11] === 'number');
     const sum = (list, col) => list.reduce((s, r) => s + r[col], 0);
     const maxKwh = kwh.reduce((best, r) => (!best || r[4] > best[4] ? r : best), null);
+    const maxBill = billed.reduce((best, r) => (!best || r[18] > best[18] ? r : best), null);
+    const avg = billed.length ? sum(billed, 18) / billed.length : null;
+    const num = v => (typeof v === 'number' ? v : 0);
+    const colSum = col => billed.reduce((s, r) => s + num(r[col]), 0);
     const lastBilled = billed.reduce((a, r) => (!a || r[0] > a[0] ? r : a), null);
     const archived = isArchived(i);
     return {
@@ -85,7 +89,13 @@ function tenantStats() {
       latestLabel: excelDateToFullMonthYear((lastBilled || rows[rows.length - 1] || [latestOverall])[0]),
       months: billed.length,
       total: sum(billed, 18),
-      avgBill: billed.length ? sum(billed, 18) / billed.length : null,
+      avgBill: avg,
+      // Standard deviation ng Total: mas maliit = mas pare-pareho ang bill
+      stdBill: billed.length ? Math.sqrt(billed.reduce((s, r) => s + (r[18] - avg) ** 2, 0) / billed.length) : null,
+      maxBill: maxBill ? { value: maxBill[18], serial: maxBill[0] } : null,
+      elecTotal: colSum(8),
+      waterTotal: colSum(15),
+      otherTotal: colSum(16) + colSum(17),
       kwhMonths: kwh.length,
       avgKwh: kwh.length ? sum(kwh, 4) / kwh.length : null,
       maxKwh: maxKwh ? { value: maxKwh[4], label: excelDateToFullMonthYear(maxKwh[0]) } : null,
@@ -138,28 +148,62 @@ function monthChanges() {
   return out;
 }
 
-// Buod bawat kwarto (Y1): mga naging tenant, kabuuang kita, bakanteng buwan, at average na kWh
+// Buod bawat kwarto (Y1): mga naging tenant, kabuuang kita, bakanteng buwan, average na kWh at m³,
+// huling upa, pinakamahabang sunod-sunod na bakante, at average na tagal ng tenant
 function roomStats() {
   const months = monthlyTotals();
   const occ = occupancyByMonth();
   return allRooms().map(room => {
     const names = workbook.SheetNames.filter(n => roomOf(n) === room);
-    let total = 0;
-    const kwh = [];
-    names.forEach(n => parseSheet(n).data.forEach(r => {
-      if (r && typeof r[0] === 'number' && typeof r[18] === 'number') {
+    let total = 0, lastRent = null;
+    const kwh = [], m3 = [], tenure = [], billedMonths = new Set();
+    names.forEach(n => {
+      const billed = new Set();
+      parseSheet(n).data.forEach(r => {
+        if (!r || typeof r[0] !== 'number') return;
+        if (typeof r[1] === 'number' && r[1] > 0 && (!lastRent || r[0] > lastRent.serial)) lastRent = { value: r[1], serial: r[0], name: n };
+        if (typeof r[18] !== 'number') return;
         total += r[18];
+        billed.add(excelDateToFullMonthYear(r[0]));
+        billedMonths.add(excelDateToFullMonthYear(r[0]));
         if (typeof r[4] === 'number') kwh.push(r[4]);
-      }
-    }));
+        if (typeof r[11] === 'number') m3.push(r[11]);
+      });
+      if (billed.size) tenure.push(billed.size);
+    });
     // Bakante: bukas na ang kwarto (ROOM_OPENED) pero walang tenant na may row sa buwang iyon
-    const vacant = months.filter(m => roomOpenIn(room, m.label) && !(occ.get(m.label) || new Set()).has(room));
+    const isVacant = m => roomOpenIn(room, m.label) && !(occ.get(m.label) || new Set()).has(room);
+    const vacant = months.filter(isVacant);
+    // Pinakamahabang sunod-sunod na bakante (magkakasunod sa listahan ng mga buwan)
+    let longest = null, run = null;
+    months.forEach(m => {
+      if (isVacant(m)) {
+        run = run ? { ...run, to: m, length: run.length + 1 } : { from: m, to: m, length: 1 };
+        if (!longest || run.length > longest.length) longest = run;
+      } else run = null;
+    });
+    const avgOf = list => (list.length ? list.reduce((a, b) => a + b, 0) / list.length : null);
     return {
       room, tenants: names, total,
-      vacantMonths: vacant.length, lastVacant: vacant.length ? vacant[vacant.length - 1] : null,
-      kwhMonths: kwh.length, avgKwh: kwh.length ? kwh.reduce((a, b) => a + b, 0) / kwh.length : null
+      vacantMonths: vacant.length, lastVacant: vacant.length ? vacant[vacant.length - 1] : null, longestVacant: longest,
+      kwhMonths: kwh.length, avgKwh: avgOf(kwh),
+      m3Months: m3.length, avgM3: avgOf(m3),
+      lastRent, tenantCount: tenure.length, avgTenure: avgOf(tenure), billedMonths: billedMonths.size
     };
   });
+}
+
+// Pagbabago ng kabuuang koleksyon kumpara sa mismong nakaraang buwan (magkasunod lang)
+function monthlyChanges(months) {
+  const out = [];
+  for (let i = 1; i < months.length; i++) {
+    const prev = months[i - 1], cur = months[i];
+    const d0 = serialToDate(prev.serial), d1 = serialToDate(cur.serial);
+    if ((d1.getFullYear() * 12 + d1.getMonth()) - (d0.getFullYear() * 12 + d0.getMonth()) !== 1) continue;
+    out.push({ serial: cur.serial, prevTotal: prev.total, total: cur.total, diff: cur.total - prev.total,
+      pct: prev.total ? (cur.total - prev.total) / prev.total * 100 : null });
+  }
+  return out;
 }
 
 // Lahat ng Top 5, nakagrupo ayon sa seksyon. Ginagamit ng Highlights at ng Tenants (ranggo ng tenant).
@@ -189,6 +233,30 @@ function highlightRankLists(stats = tenantStats(), months = monthlyTotals()) {
     const bar = hlBars(top, value);
     return top.map(r => ({ rank: r.rank, name: `Room ${r.item.room}`, tenant: null, value: format(value(r.item)), bar: bar(r), sub: sub(r.item) }));
   };
+
+  // Pagbabago ng kabuuang koleksyon (lahat ng tenant), kumpara sa nakaraang buwan
+  const totalChangeRows = (top, sign) => {
+    const bar = hlBars(top, c => Math.abs(c.diff));
+    return top.map(r => ({
+      rank: r.rank, name: shortMonthYear(r.item.serial), tenant: null, bar: bar(r),
+      value: `${sign}${formatCurrency(Math.abs(r.item.diff))}`,
+      sub: `${compactPeso(r.item.prevTotal)} → ${compactPeso(r.item.total)}`
+        + (r.item.pct != null ? ` (${sign}${Math.abs(r.item.pct).toFixed(1)}%)` : '')
+    }));
+  };
+  const totalChanges = monthlyChanges(months);
+  // Kabuuan bawat taon
+  const years = [];
+  months.forEach(m => {
+    const y = serialToDate(m.serial).getFullYear();
+    let e = years.find(x => x.year === y);
+    if (!e) years.push(e = { year: y, total: 0, count: 0 });
+    e.total += m.total;
+    e.count++;
+  });
+  const yearTop = rankTop(years, y => y.total, false, Infinity);
+  const yearBar = hlBars(yearTop, y => y.total);
+  const tenantPaid = t => `${hlTenantLine(t)} · ${t.months} buwan`;
 
   const changes = monthChanges();
   // Bar ng Pinakabagong tenant: mas bago = mas mahaba (pinakaluma ≈ maikli, pinakabago = buo)
@@ -222,7 +290,18 @@ function highlightRankLists(stats = tenantStats(), months = monthlyTotals()) {
           // Wala pang singil: sa dulo, walang average
           ...stats.filter(t => t.avgBill == null).map(t => ({ rank: stats.filter(x => x.avgBill != null).length + 1, name: t.name,
             tenant: t.name, value: '–', bar: 0, sub: `${hlTenantLine(t)} · wala pang singil` }))
-        ] }
+        ] },
+      // Coefficient of variation: std ÷ average ng Total (mas mababa = mas pare-pareho)
+      { title: 'Pinaka-consistent na bill', note: `Pinakamaliit ang galaw ng bill buwan-buwan (${minNote})`,
+        rows: tenantRows(rankTop(enough('months').filter(t => t.avgBill > 0), t => t.stdBill / t.avgBill, true), t => t.stdBill / t.avgBill,
+          v => `±${(v * 100).toFixed(1)}%`, t => `${hlTenantLine(t)} · ${compactPeso(t.avgBill)} ± ${compactPeso(t.stdBill)}`) },
+      { title: 'Pinakamalaking bill sa isang buwan', note: 'Pinakamataas na Total ng bawat tenant',
+        rows: tenantRows(rankTop(stats.filter(t => t.maxBill), t => t.maxBill.value), t => t.maxBill.value, formatCurrency,
+          t => `${hlTenantLine(t)} · ${shortMonthYear(t.maxBill.serial)}`) },
+      { title: 'Pinakamalaking naibayad sa internet/others', note: 'Kabuuan ng Internet at Others mula nang pumasok',
+        rows: tenantRows(rankTop(stats.filter(t => t.otherTotal > 0), t => t.otherTotal), t => t.otherTotal, formatCurrency, tenantPaid) },
+      { title: 'Pinakamababang average na bill', note: `Average bawat buwan (${minNote})`,
+        rows: tenantRows(rankTop(enough('months'), t => t.avgBill, true), t => t.avgBill, formatCurrency, tenantPaid) }
     ] },
     { section: 'Mga buwan', lists: [
       { title: 'Pinakamataas na koleksyon', note: 'Kabuuan ng lahat ng tenant sa isang buwan', rows: monthRows(rankTop(months, m => m.total)) },
@@ -230,7 +309,22 @@ function highlightRankLists(stats = tenantStats(), months = monthlyTotals()) {
       { title: 'Pinakamalaking pagtaas ng bill', note: 'Isang tenant, kumpara sa nakaraang buwan niya',
         rows: changeRows(rankTop(changes.filter(c => c.diff > 0), c => c.diff), '+') },
       { title: 'Pinakamalaking pagbaba ng bill', note: 'Isang tenant, kumpara sa nakaraang buwan niya',
-        rows: changeRows(rankTop(changes.filter(c => c.diff < 0), c => c.diff, true), '−') }
+        rows: changeRows(rankTop(changes.filter(c => c.diff < 0), c => c.diff, true), '−') },
+      { title: 'Mga taon, ayon sa koleksyon', note: 'Kabuuang koleksyon bawat taon', all: true,
+        rows: yearTop.map(r => ({ rank: r.rank, name: String(r.item.year), tenant: null, value: formatCurrency(r.item.total), bar: yearBar(r),
+          sub: `${r.item.count} buwan${r.item.count < 12 ? ' (hindi buong taon)' : ''}` })) },
+      { title: 'Pinakamalaking pagtaas ng koleksyon', note: 'Kabuuan ng lahat ng tenant, kumpara sa nakaraang buwan',
+        rows: totalChangeRows(rankTop(totalChanges.filter(c => c.diff > 0), c => c.diff), '+') },
+      { title: 'Pinakamalaking pagbaba ng koleksyon', note: 'Kabuuan ng lahat ng tenant, kumpara sa nakaraang buwan',
+        rows: totalChangeRows(rankTop(totalChanges.filter(c => c.diff < 0), c => c.diff, true), '−') },
+      { title: 'Pinakamataas na average bawat tenant', note: 'Koleksyon ng buwan ÷ bilang ng tenant na may singil',
+        rows: (() => {
+          const avg = m => m.total / m.tenantCount;
+          const top = rankTop(months.filter(m => m.tenantCount > 0), avg);
+          const bar = hlBars(top, avg);
+          return top.map(r => ({ rank: r.rank, name: shortMonthYear(r.item.serial), tenant: null, value: formatCurrency(avg(r.item)), bar: bar(r),
+            sub: `${compactPeso(r.item.total)} ÷ ${r.item.tenantCount} ${r.item.tenantCount === 1 ? 'tenant' : 'tenants'}` }));
+        })() }
     ] },
     { section: 'Kuryente at tubig', lists: [
       { title: 'Pinakamalakas sa kuryente', note: `Average na kWh bawat buwan (${minNote})`,
@@ -241,7 +335,21 @@ function highlightRankLists(stats = tenantStats(), months = monthlyTotals()) {
       { title: 'Pinakamalakas sa tubig', note: `Average na m³ bawat buwan (${minNote})`,
         rows: tenantRows(rankTop(enough('m3Months'), t => t.avgM3), t => t.avgM3, v => `${hlNum(v, 1)} m³`, hlTenantLine) },
       { title: 'Pinakamatipid sa tubig', note: `Pinakamababang average na m³ (${minNote})`,
-        rows: tenantRows(rankTop(enough('m3Months'), t => t.avgM3, true), t => t.avgM3, v => `${hlNum(v, 1)} m³`, hlTenantLine) }
+        rows: tenantRows(rankTop(enough('m3Months'), t => t.avgM3, true), t => t.avgM3, v => `${hlNum(v, 1)} m³`, hlTenantLine) },
+      { title: 'Pinakamalaking naibayad sa kuryente', note: 'Kabuuang singil sa kuryente mula nang pumasok',
+        rows: tenantRows(rankTop(stats.filter(t => t.elecTotal > 0), t => t.elecTotal), t => t.elecTotal, formatCurrency, tenantPaid) },
+      { title: 'Pinakamalaking naibayad sa tubig', note: 'Kabuuang singil sa tubig mula nang pumasok',
+        rows: tenantRows(rankTop(stats.filter(t => t.waterTotal > 0), t => t.waterTotal), t => t.waterTotal, formatCurrency, tenantPaid) },
+      { title: 'Pinakamalakas sa tubig (kwarto)', note: 'Average na m³ bawat buwan ng kwarto',
+        rows: roomRows(rankTop(rooms.filter(r => r.m3Months > 0), r => r.avgM3), r => r.avgM3, v => `${hlNum(v, 1)} m³`,
+          r => `${r.m3Months} buwang may m³`) },
+      { title: 'Mga buwang pinakamalakas sa kuryente', note: 'Kabuuang kWh ng lahat ng kwarto sa isang buwan',
+        rows: (() => {
+          const top = rankTop(months.filter(m => m.kwh > 0), m => m.kwh);
+          const bar = hlBars(top, m => m.kwh);
+          return top.map(r => ({ rank: r.rank, name: shortMonthYear(r.item.serial), tenant: null, value: `${hlNum(r.item.kwh)} kWh`, bar: bar(r),
+            sub: `${hlNum(r.item.m3, 1)} m³ · ${r.item.tenantCount} ${r.item.tenantCount === 1 ? 'tenant' : 'tenants'}` }));
+        })() }
     ] },
     { section: 'Mga kwarto', lists: [
       { title: 'Pinakamalaking kita', note: 'Kabuuan ng lahat ng naging tenant ng kwarto',
@@ -255,7 +363,19 @@ function highlightRankLists(stats = tenantStats(), months = monthlyTotals()) {
           r => r.tenants.join(', ')) },
       { title: 'Pinakamalakas sa kuryente (kwarto)', note: 'Average na kWh bawat buwan ng kwarto',
         rows: roomRows(rankTop(rooms.filter(r => r.kwhMonths > 0), r => r.avgKwh), r => r.avgKwh, v => `${hlNum(v)} kWh`,
-          r => `${r.kwhMonths} buwang may kWh`) }
+          r => `${r.kwhMonths} buwang may kWh`) },
+      { title: 'Pinakamataas na upa ngayon', note: 'Huling rent (col B) ng bawat kwarto',
+        rows: roomRows(rankTop(rooms.filter(r => r.lastRent), r => r.lastRent.value), r => r.lastRent.value, formatCurrency,
+          r => `${r.lastRent.name} · ${shortMonthYear(r.lastRent.serial)}`) },
+      { title: 'Pinakamahabang sunod-sunod na bakante', note: 'Pinakamaraming magkakasunod na buwang walang tenant',
+        rows: roomRows(rankTop(rooms.filter(r => r.longestVacant), r => r.longestVacant.length), r => r.longestVacant.length,
+          v => `${v} buwan`, r => `${shortMonthYear(r.longestVacant.from.serial)} – ${shortMonthYear(r.longestVacant.to.serial)}`) },
+      { title: 'Pinakamatagal mag-stay ang tenant', note: 'Average na buwang may singil ng mga naging tenant ng kwarto',
+        rows: roomRows(rankTop(rooms.filter(r => r.avgTenure != null), r => r.avgTenure), r => r.avgTenure, v => `${hlNum(v, 1)} buwan`,
+          r => `${r.tenantCount} tenant${r.tenantCount === 1 ? '' : 's'}`) },
+      { title: 'Pinakamataas na kita bawat buwan', note: 'Kabuuang kita ng kwarto ÷ ilang buwang may singil',
+        rows: roomRows(rankTop(rooms.filter(r => r.billedMonths > 0), r => r.total / r.billedMonths), r => r.total / r.billedMonths,
+          formatCurrency, r => `${r.billedMonths} buwang may singil`) }
     ] }
   ];
 }
@@ -299,6 +419,57 @@ function renderHighlights() {
   const tenants = stats.filter(t => t.firstSerial != null);
   const activeCount = tenants.filter(t => !t.archived).length;
   cards.push({ label: 'Mga naging tenant', value: String(tenants.length), detail: `${activeCount} active · ${tenants.length - activeCount} archived` });
+
+  if (months.length) {
+    const yearOf = s => serialToDate(s).getFullYear();
+    const monthOf = s => serialToDate(s).getMonth();
+    const best = months.reduce((a, m) => (m.total > a.total ? m : a));
+    cards.push({ label: 'Record na buwan', value: formatCurrency(best.total), detail: `${shortMonthYear(best.serial)} · ${best.tenantCount} tenants` });
+
+    // YTD: Jan hanggang sa pinakabagong buwan, kumpara sa parehong panahon noong nakaraang taon
+    const year = yearOf(latest.serial), upTo = monthOf(latest.serial);
+    const ytd = y => months.filter(m => yearOf(m.serial) === y && monthOf(m.serial) <= upTo).reduce((s, m) => s + m.total, 0);
+    const cur = ytd(year), prev = ytd(year - 1);
+    const span = `${shortMonth(months.find(m => yearOf(m.serial) === year).serial)}–${shortMonth(latest.serial)}`;
+    const pct = prev ? (cur - prev) / prev * 100 : null;
+    cards.push({ label: `Ngayong taon (${year})`, value: formatCurrency(cur),
+      detail: pct == null ? `${span} · walang data noong ${year - 1}` : `${span} · ${pct >= 0 ? '▲' : '▼'} ${Math.abs(pct).toFixed(1)}% kumpara sa ${year - 1}` });
+
+    const avgMonths = list => list.reduce((s, t) => s + t.months, 0) / list.length;
+    const done = tenants.filter(t => t.archived && t.months > 0), withBills = tenants.filter(t => t.months > 0);
+    if (withBills.length) {
+      cards.push({ label: 'Average na tagal ng tenant', value: `${num(done.length ? avgMonths(done) : avgMonths(withBills), 1)} buwan`,
+        detail: done.length ? `${done.length} umalis na · ${num(avgMonths(withBills), 1)} kasama ang active` : 'kasama ang active (wala pang umalis)' });
+    }
+
+    const kwh = months.reduce((s, m) => s + m.kwh, 0), m3 = months.reduce((s, m) => s + m.m3, 0);
+    cards.push({ label: 'Kabuuang konsumo', value: `${num(kwh)} kWh`, detail: `${num(m3, 1)} m³ · ${months.length} buwan` });
+
+    // Bakanteng buwan ng lahat ng kwarto, at ang tantyang nawalang kita (kapareho ng graph sa Dashboard)
+    const lost = [...lostRentByMonth(months).values()];
+    const vacantCount = lost.reduce((s, l) => s + l.items.length, 0);
+    cards.push({ label: 'Bakanteng buwan', value: `${vacantCount} buwan`,
+      detail: `Tantyang nawalang kita: ${formatCurrency(lost.reduce((s, l) => s + l.sum, 0))}` });
+
+    const longest = tenants.filter(t => !t.archived && t.months > 0).sort((a, b) => b.months - a.months)[0];
+    if (longest) {
+      cards.push({ label: 'Pinakamatagal na active', value: longest.name,
+        detail: `${longest.months} buwan${longest.room ? ' · Room ' + longest.room : ''} · mula ${shortMonthYear(longest.firstSerial)}` });
+    }
+
+    // Paglago: average ng huling 12 buwan kumpara sa unang 12 buwan (kapag may ≥24 buwan)
+    if (months.length >= 24) {
+      const avg = list => list.reduce((s, m) => s + m.total, 0) / list.length;
+      const first = avg(months.slice(0, 12)), last = avg(months.slice(-12));
+      const g = (last - first) / first * 100;
+      cards.push({ label: 'Paglago', value: `${g >= 0 ? '▲' : '▼'} ${Math.abs(g).toFixed(1)}%`,
+        detail: `${compactPeso(first)} → ${compactPeso(last)} bawat buwan (unang vs huling 12 buwan)` });
+    }
+
+    const moveIn = tenants.filter(t => yearOf(t.firstSerial) === year).length;
+    const moveOut = tenants.filter(t => t.archived && t.lastSerial != null && yearOf(t.lastSerial) === year).length;
+    cards.push({ label: `Lipatan (${year})`, value: `${moveIn} pumasok`, detail: `${moveOut} umalis` });
+  }
 
   const grid = document.getElementById('hlCards');
   grid.innerHTML = '';

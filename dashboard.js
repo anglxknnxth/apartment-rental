@@ -243,7 +243,7 @@ function niceRange(minValue, maxValue) {
 }
 
 // Kabuuan bawat buwan ng lahat ng tenant, luma -> bago.
-// Kasama ang kWh bawat kwarto (Y1) at ang data para sa average na rate ng kuryente.
+// Kasama ang kWh, m³, rent at koleksyon bawat kwarto (Y1).
 function monthlyTotals() {
   const num = v => typeof v === 'number' ? v : 0;
   const map = new Map();
@@ -253,32 +253,23 @@ function monthlyTotals() {
       if (!r || typeof r[0] !== 'number' || typeof r[18] !== 'number') return;
       const label = excelDateToFullMonthYear(r[0]);
       const m = map.get(label) || {
-        label, serial: r[0], water: 0, elec: 0, total: 0, tenantCount: 0,
-        rateElec: 0, rateKwh: 0, rateWater: 0, rateM3: 0, roomKwh: {}, roomM3: {}, roomTotal: {}, roomRateElec: {}, roomRateKwh: {}
+        label, serial: r[0], rent: 0, water: 0, elec: 0, otherAll: 0, kwh: 0, m3: 0, total: 0, tenantCount: 0,
+        roomKwh: {}, roomM3: {}, roomTotal: {}, roomRent: {}
       };
       m.serial = Math.max(m.serial, r[0]);
+      m.rent += num(r[1]);
       m.water += num(r[15]);
       m.elec += num(r[8]);
+      m.otherAll += num(r[16]) + num(r[17]);
+      m.kwh += num(r[4]);
+      m.m3 += num(r[11]);
       m.total += r[18];
       m.tenantCount++;
-      // Rate = Σ singil ÷ Σ konsumo, kapag number ang dalawa
-      // Kuryente: col I ÷ col E (kWh) · Tubig: col P ÷ col L (m³)
-      if (typeof r[8] === 'number' && typeof r[4] === 'number' && r[4] > 0) {
-        m.rateElec += r[8];
-        m.rateKwh += r[4];
-      }
-      if (typeof r[15] === 'number' && typeof r[11] === 'number' && r[11] > 0) {
-        m.rateWater += r[15];
-        m.rateM3 += r[11];
-      }
       if (room) {
         if (typeof r[4] === 'number') m.roomKwh[room] = (m.roomKwh[room] || 0) + r[4];
         if (typeof r[11] === 'number') m.roomM3[room] = (m.roomM3[room] || 0) + r[11];
-        // Rate bawat kwarto: Σ col I ÷ Σ col E ng mga tenant ng kwartong iyon
-        if (typeof r[8] === 'number' && typeof r[4] === 'number' && r[4] > 0) {
-          m.roomRateElec[room] = (m.roomRateElec[room] || 0) + r[8];
-          m.roomRateKwh[room] = (m.roomRateKwh[room] || 0) + r[4];
-        }
+        // Upa ng kwarto: ang pinakamataas kung 2 tenant sa iisang buwan (lipatan), hindi sinusuma
+        if (typeof r[1] === 'number') m.roomRent[room] = Math.max(m.roomRent[room] || 0, r[1]);
         m.roomTotal[room] = (m.roomTotal[room] || 0) + r[18];
       }
       map.set(label, m);
@@ -347,22 +338,40 @@ function renderCharts(monthLabel, sums) {
   renderBreakdownChart(byId('chartBreakdown'), lastChartSums);
   renderYoyChart(byId('chartYoy'), all, all[end]);
   renderAvgBillChart(byId('chartAvgBill'), months, selected);
+  renderCumulativeChart(byId('chartCumulative'), all, months);
+  renderYearlyChart(byId('chartYearly'), all, all[end]);
+  renderTrendChart(byId('chartTrend'), all, months);
+  renderChangeChart(byId('chartChange'), all, months, selected);
+  renderShareChart(byId('chartShare'), months, selected);
   // Mga kwarto
   renderRoomsChart(byId('chartRooms'), monthLabel);
   renderOccupancyChart(byId('chartOccupancy'), months, selected);
+  renderVacancyChart(byId('chartVacancy'), months, selected);
   renderRoomStackChart(byId('chartRoomStack'), months, selected);
+  renderTenantTimeline(byId('chartTimeline'), months);
+  renderTenureChart(byId('chartTenure'));
+  renderLostRentChart(byId('chartLostRent'), months, selected);
+  renderRoomRentChart(byId('chartRoomRent'), months);
   // Kuryente at tubig
-  renderUtilitiesChart(byId('chartUtilities'), months);
-  renderRateChart(byId('chartRate'), months);
-  renderWaterRateChart(byId('chartWaterRate'), months);
+  renderUtilitiesChart(byId('chartUtilities'), months, selected);
   renderRoomKwhChart(byId('chartRoomKwh'), months);
   renderRoomM3Chart(byId('chartRoomM3'), months);
+  renderSeasonChart(byId('chartSeasonKwh'), all, all[end], 'kwh');
+  renderSeasonChart(byId('chartSeasonM3'), all, all[end], 'm3');
 }
 
-// ---- Ngayong taon vs nakaraang taon: Jan–Dec, may YTD sa subtitle ----
+// Mga x na hindi totoong buwan (taon, Jan–Dec, bucket): may label at short para sa xLabels
+function pseudoMonths(labels, serial) {
+  return labels.map(label => ({ label, short: label, serial }));
+}
+
+// ---- Ngayong taon vs mga nakaraang taon (mula sa unang taon sa sheet): Jan–Dec, may YTD sa subtitle ----
 function renderYoyChart(container, all, selected) {
   const sel = serialToDate(selected.serial);
   const year = sel.getFullYear(), upTo = sel.getMonth();
+  const firstYear = serialToDate(all[0].serial).getFullYear();
+  const years = [];
+  for (let y = firstYear; y <= year; y++) years.push(y);
   const totalOf = (y, mIdx) => {
     const label = new Date(y, mIdx, 1).toLocaleString('en-US', { month: 'long' }).toUpperCase() + ', ' + y;
     const found = all.find(m => m.label === label);
@@ -376,7 +385,8 @@ function renderYoyChart(container, all, selected) {
       short: d.toLocaleString('en-US', { month: 'short' }),
       serial: selected.serial,
       cur: i <= upTo ? totalOf(year, i) : null,
-      prev: totalOf(year - 1, i)
+      prev: totalOf(year - 1, i),
+      byYear: Object.fromEntries(years.map(y => [y, y === year ? (i <= upTo ? totalOf(y, i) : null) : totalOf(y, i)]))
     });
   }
 
@@ -393,13 +403,16 @@ function renderYoyChart(container, all, selected) {
   }
   document.getElementById('yoySummary').innerText = text;
 
-  // Grouped columns: nakaraang taon (gray) sa kaliwa, ngayong taon (blue) sa kanan
-  renderGroupedColumnChart(container, months, [
-    { name: String(year - 1), color: OTHER_COLOR, value: m => m.prev },
-    { name: String(year), color: CHART.accent, value: m => m.cur }
-  ], {
+  // Grouped columns, luma -> bago mula kaliwa: maputlang blue ang mga nakaraang taon (mas luma = mas maputla),
+  // at accent blue ang ngayong taon
+  const older = years.length - 1;
+  renderGroupedColumnChart(container, months, years.map((y, k) => ({
+    name: String(y),
+    color: y === year ? CHART.accent : rampColor(BLUE_RAMP, older > 1 ? 0.1 + 0.25 * k / (older - 1) : 0.3),
+    value: m => m.byYear[y]
+  })), {
     format: v => formatCurrency(v),
-    ariaLabel: 'Koleksyon ngayong taon kumpara sa nakaraang taon',
+    ariaLabel: `Koleksyon bawat buwan, ${firstYear}–${year}`,
     legendEl: document.getElementById('chartYoyLegend'),
     clickable: false // Jan–Dec ito, hindi totoong buwan sa dropdown
   });
@@ -576,11 +589,86 @@ function renderOccupancyChart(container, months, selectedLabel) {
   });
 }
 
-// ---- Koleksyon bawat kwarto: stacked columns, 12 buwan ----
-function renderRoomStackChart(container, months, selectedLabel) {
+// ---- Vacancy tiles: kwarto × buwan; may kulay = may nakatira, outline = bakante, wala = hindi pa bukas ----
+function renderVacancyChart(container, months, selectedLabel) {
   container.querySelectorAll('svg').forEach(s => s.remove());
-  const series = roomSeries('roomTotal');
-  const legend = document.getElementById('chartRoomStackLegend');
+  const rooms = allRooms();
+  // label -> room -> mga tenant na may row sa buwang iyon (kahit wala pang Total, gaya ng occupancy)
+  const who = new Map();
+  workbook.SheetNames.forEach(name => {
+    const room = roomOf(name);
+    if (!room) return;
+    parseSheet(name).data.forEach(r => {
+      if (!r || typeof r[0] !== 'number') return;
+      const label = excelDateToFullMonthYear(r[0]);
+      if (!who.has(label)) who.set(label, {});
+      const byRoom = who.get(label);
+      (byRoom[room] = byRoom[room] || new Set()).add(name);
+    });
+  });
+
+  const legend = document.getElementById('chartVacancyLegend');
+  legend.innerHTML = '';
+  [['May nakatira', CHART.accent], ['Bakante', null]].forEach(([name, color]) => {
+    const item = document.createElement('span');
+    item.innerHTML = '<i class="square"></i>';
+    if (color) item.firstChild.style.background = color;
+    else Object.assign(item.firstChild.style, { background: '#fff', boxShadow: `inset 0 0 0 1px ${CHART.axis}` });
+    item.append(name);
+    legend.appendChild(item);
+  });
+
+  const rowH = 26, gap = 2;
+  const margin = { top: 4, right: 8, bottom: 26, left: 72 };
+  const width = container.clientWidth;
+  const height = margin.top + rooms.length * rowH + margin.bottom;
+  container.style.height = height + 'px';
+  const svg = svgEl('svg', { width, height, role: 'img', 'aria-label': 'Kailan bakante ang bawat kwarto' });
+  container.prepend(svg);
+
+  const band = (width - margin.left - margin.right) / months.length;
+  const xCenter = i => margin.left + band * (i + 0.5);
+  const tip = chartTip(container);
+
+  rooms.forEach((room, r) => {
+    const yTop = margin.top + r * rowH;
+    const label = svgEl('text', { x: 0, y: yTop + rowH / 2 + 4, 'font-size': 12, 'font-weight': 600, fill: CHART.ink }, svg);
+    label.textContent = `Room ${room}`;
+    months.forEach((m, i) => {
+      const tenants = [...((who.get(m.label) || {})[room] || [])];
+      const opened = roomOpenIn(room, m.label);
+      const x = margin.left + band * i + gap / 2, w = band - gap, h = rowH - gap;
+      const dim = selectedLabel && m.label !== selectedLabel ? 0.55 : 1;
+      if (opened) svgEl('rect', tenants.length
+        ? { x, y: yTop, width: w, height: h, rx: 3, fill: CHART.accent, opacity: dim }
+        : { x: x + 0.5, y: yTop + 0.5, width: w - 1, height: h - 1, rx: 3, fill: '#fff', stroke: CHART.axis }, svg);
+      const hit = svgEl('rect', { x: margin.left + band * i, y: yTop, width: band, height: rowH,
+        fill: 'transparent', style: 'cursor:pointer' }, svg);
+      hit.addEventListener('mouseenter', () => tip.show([[`Room ${room} · ${m.label}`],
+        [!opened ? 'Wala pa ang kwarto' : (tenants.length ? tenants.join(', ') : 'Bakante'), null, true]], xCenter(i), yTop));
+      hit.addEventListener('mouseleave', () => tip.hide());
+      hit.addEventListener('click', () => selectSummaryMonth(m.label));
+    });
+  });
+  xLabels(svg, months, xCenter, height, band);
+}
+
+// ---- Koleksyon bawat kwarto: stacked columns ----
+function renderRoomStackChart(container, months, selectedLabel) {
+  renderStackedColumnChart(container, months, roomSeries('roomTotal'), {
+    selectedLabel,
+    ariaLabel: 'Koleksyon bawat kwarto',
+    legendEl: document.getElementById('chartRoomStackLegend')
+  });
+}
+
+// ---- Generic na stacked columns: nakapatong ang mga series bawat buwan (una = pinakaibaba) ----
+// series: [{ name, color, value: month => number|null }]
+// opts: { selectedLabel, ariaLabel, legendEl, scale?, tick?, format?, totalLabel?, clickable? }
+function renderStackedColumnChart(container, months, series, opts) {
+  const selectedLabel = opts.selectedLabel;
+  container.querySelectorAll('svg').forEach(s => s.remove());
+  const legend = opts.legendEl;
   legend.innerHTML = '';
   series.forEach(s => {
     const item = document.createElement('span');
@@ -592,12 +680,14 @@ function renderRoomStackChart(container, months, selectedLabel) {
 
   const width = container.clientWidth, height = CHART.height;
   const margin = { top: 22, right: 8, bottom: 26, left: 48 };
-  const svg = svgEl('svg', { width, height, role: 'img', 'aria-label': 'Koleksyon bawat kwarto, 12 buwan' });
+  const svg = svgEl('svg', { width, height, role: 'img', 'aria-label': opts.ariaLabel });
   container.prepend(svg);
 
   const totals = months.map(m => series.reduce((s, x) => s + (x.value(m) || 0), 0));
-  const scale = niceScale(Math.max(...totals));
-  const y = drawAxes(svg, { width, height, margin, scale });
+  const scale = opts.scale || niceScale(Math.max(...totals));
+  const y = drawAxes(svg, { width, height, margin, scale, tick: opts.tick });
+  const format = opts.format || (v => formatCurrency(v)); // format(v, series, month)
+  const totalLabel = opts.totalLabel !== false;
   const band = (width - margin.left - margin.right) / months.length;
   const xCenter = i => margin.left + band * (i + 0.5);
   const barW = Math.min(32, band * 0.6);
@@ -623,33 +713,21 @@ function renderRoomStackChart(container, months, selectedLabel) {
         fill: p.s.color, opacity: selected || !selectedLabel ? 1 : 0.55
       }, svg);
     });
-    if (selected) {
+    if (selected && totalLabel) {
       const t = svgEl('text', { x: xCenter(i), y: y(totals[i]) - 7, 'text-anchor': 'middle', 'font-size': 11, 'font-weight': 600, fill: CHART.ink }, svg);
       t.textContent = compactPeso(totals[i]);
     }
     const hit = svgEl('rect', { x: margin.left + band * i, y: margin.top, width: band, height: base - margin.top,
-      fill: 'transparent', style: 'cursor:pointer' }, svg);
+      fill: 'transparent', style: opts.clickable === false ? '' : 'cursor:pointer' }, svg);
     hit.addEventListener('mouseenter', () => tip.show([
       [m.label],
-      ...series.map(s => [`${s.name}: ${s.value(m) ? formatCurrency(s.value(m)) : 'wala'}`, s.color]),
-      [`Total: ${formatCurrency(totals[i])}`, null, true]
+      ...series.map(s => [`${s.name}: ${s.value(m) ? format(s.value(m), s, m) : 'wala'}`, s.color]),
+      ...(totalLabel ? [[`Total: ${formatCurrency(totals[i])}`, null, true]] : [])
     ], xCenter(i), y(totals[i])));
     hit.addEventListener('mouseleave', () => tip.hide());
-    hit.addEventListener('click', () => selectSummaryMonth(m.label));
+    if (opts.clickable !== false) hit.addEventListener('click', () => selectSummaryMonth(m.label));
   });
   xLabels(svg, months, xCenter, height, band);
-}
-
-// ---- Rate ng tubig (₱/m³) ----
-function renderWaterRateChart(container, months) {
-  renderLineChart(container, months, [
-    { name: 'Rate', color: CHART.water, value: m => (m.rateM3 > 0 ? m.rateWater / m.rateM3 : null) }
-  ], {
-    zeroBased: false,
-    format: v => '₱' + v.toFixed(2),
-    tick: v => '₱' + v.toLocaleString('en-PH', { maximumFractionDigits: 1 }),
-    ariaLabel: 'Rate ng tubig bawat m³'
-  });
 }
 
 // ---- Konsumo ng tubig bawat kwarto (m³) ----
@@ -765,15 +843,21 @@ function renderLineChart(container, months, series, opts) {
   const crosshair = svgEl('line', { y1: margin.top, y2: bottom, stroke: CHART.axis, 'stroke-width': 1, visibility: 'hidden' }, svg);
   const ends = [];
   series.forEach(s => {
-    let d = '', pen = false, lastI = -1;
+    let d = '', pen = false, lastI = -1, firstI = -1;
     months.forEach((m, i) => {
       const v = s.value(m);
       if (v == null) { pen = false; return; }
-      d += `${pen ? 'L' : 'M'}${xAt(i)},${y(v)} `;
+      // opts.step: pahalang muna, tapos patayo (para sa halagang nagbabago lang paminsan-minsan, hal. upa)
+      d += pen ? (opts.step ? `H${xAt(i)} V${y(v)} ` : `L${xAt(i)},${y(v)} `) : `M${xAt(i)},${y(v)} `;
       pen = true;
+      if (firstI < 0) firstI = i;
       lastI = i;
     });
     if (lastI < 0) return;
+    // opts.area: maputlang fill sa ilalim (para sa iisang series na walang puwang)
+    if (opts.area) {
+      svgEl('path', { d: `${d}V${bottom} H${xAt(firstI)} Z`, fill: s.color, opacity: 0.12 }, svg);
+    }
     svgEl('path', { d, fill: 'none', stroke: s.color, 'stroke-width': 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }, svg);
     // Tuldok din sa mga nag-iisang punto (walang katabi), para makita pa rin
     months.forEach((m, i) => {
@@ -825,28 +909,6 @@ function renderLineChart(container, months, series, opts) {
     crosshair.setAttribute('visibility', 'hidden');
     hoverDots.forEach(d => d.setAttribute('visibility', 'hidden'));
     tip.hide();
-  });
-}
-
-// ---- Rate ng kuryente (₱/kWh): isang linya, hindi nagsisimula sa 0 ----
-// ---- Rate ng kuryente bawat kwarto (₱/kWh): isang linya bawat kwarto, parehong kulay ng ibang graph ----
-function renderRateChart(container, months) {
-  const rooms = allRooms();
-  const shown = rooms.slice(0, SLOTS.length), extra = rooms.slice(SLOTS.length);
-  // Weighted: Σ singil ÷ Σ kWh ng mga kwarto sa listahan
-  const rateOf = (m, list) => {
-    const kwh = list.reduce((s, r) => s + (m.roomRateKwh[r] || 0), 0);
-    return kwh > 0 ? list.reduce((s, r) => s + (m.roomRateElec[r] || 0), 0) / kwh : null;
-  };
-  const series = shown.map((room, i) => ({ name: `Room ${room}`, color: SLOTS[i], value: m => rateOf(m, [room]) }));
-  if (extra.length) series.push({ name: 'Iba pa', color: OTHER_COLOR, value: m => rateOf(m, extra) });
-
-  renderLineChart(container, months, series, {
-    zeroBased: false,
-    format: v => '₱' + v.toFixed(2),
-    tick: v => '₱' + v.toLocaleString('en-PH', { maximumFractionDigits: 1 }),
-    ariaLabel: 'Rate ng kuryente bawat kwarto',
-    legendEl: document.getElementById('chartRateLegend')
   });
 }
 
@@ -1016,7 +1078,7 @@ function renderTotalsChart(container, months, selectedLabel) {
 }
 
 // Generic na column chart, isang series; naka-highlight ang napiling buwan, i-click para piliin ang buwan.
-// o: { value, scale?, tick?, selectedLabel, label (sa ibabaw ng napili), tooltip (lines), ariaLabel, clickable?, color?, softColor? }
+// o: { value, scale?, tick?, selectedLabel, label (sa ibabaw ng napili), tooltip (lines), ariaLabel, clickable?, color?, softColor?, ghost? }
 function renderColumnChart(container, months, o) {
   container.querySelectorAll('svg').forEach(s => s.remove());
   const width = container.clientWidth, height = CHART.height;
@@ -1024,7 +1086,7 @@ function renderColumnChart(container, months, o) {
   const svg = svgEl('svg', { width, height, role: 'img', 'aria-label': o.ariaLabel });
   container.prepend(svg);
 
-  const scale = o.scale || niceScale(Math.max(...months.map(o.value)));
+  const scale = o.scale || niceScale(Math.max(...months.map(m => Math.max(o.value(m), (o.ghost && o.ghost(m)) || 0))));
   const y = drawAxes(svg, { width, height, margin, scale, tick: o.tick });
   const band = (width - margin.left - margin.right) / months.length;
   const xCenter = i => margin.left + band * (i + 0.5);
@@ -1036,6 +1098,12 @@ function renderColumnChart(container, months, o) {
     const selected = m.label === o.selectedLabel;
     const x = xCenter(i) - barW / 2, top = y(o.value(m)), h = base - top;
     const r = Math.min(4, h, barW / 2);
+    // o.ghost: dashed na outline hanggang sa tantya (hal. buong taon), nasa likod ng column
+    const g = o.ghost && o.ghost(m);
+    if (g && g > o.value(m)) {
+      svgEl('rect', { x: x + 0.5, y: y(g) + 0.5, width: barW - 1, height: base - y(g) - 1, rx: 3,
+        fill: 'none', stroke: o.color || CHART.accent, 'stroke-dasharray': '4 3' }, svg);
+    }
     // 4px na bilog na dulo sa itaas, kuwadrado sa baseline
     if (h > 0) {
       svgEl('path', {
@@ -1058,15 +1126,328 @@ function renderColumnChart(container, months, o) {
   xLabels(svg, months, xCenter, height, band);
 }
 
-// Grouped columns: Kuryente at Tubig bawat buwan (iisang ₱ axis)
-function renderUtilitiesChart(container, months) {
-  renderGroupedColumnChart(container, months, [
+// Stacked columns: Kuryente (ibaba) at Tubig (ibabaw) bawat buwan
+function renderUtilitiesChart(container, months, selectedLabel) {
+  renderStackedColumnChart(container, months, [
     { name: 'Kuryente', color: CHART.accent, value: m => m.elec },
     { name: 'Tubig', color: CHART.water, value: m => m.water }
   ], {
-    format: v => formatCurrency(v),
+    selectedLabel,
     ariaLabel: 'Kuryente at tubig bawat buwan',
     legendEl: document.getElementById('chartUtilitiesLegend')
+  });
+}
+
+// ---- Naipong koleksyon: area, mula sa unang buwan sa sheet ----
+function renderCumulativeChart(container, all, months) {
+  const cum = new Map();
+  let sum = 0;
+  all.forEach(m => { sum += m.total; cum.set(m.label, sum); });
+  renderLineChart(container, months, [
+    { name: 'Naipon', color: CHART.accent, value: m => cum.get(m.label) }
+  ], {
+    zeroBased: true,
+    area: true,
+    format: v => formatCurrency(v),
+    ariaLabel: 'Naipong koleksyon'
+  });
+}
+
+// ---- Koleksyon bawat taon: columns; dashed na tantya sa buong taon para sa pinakabagong taon ----
+function renderYearlyChart(container, all, selected) {
+  const byYear = new Map(); // taon -> { total, count }
+  all.forEach(m => {
+    const y = serialToDate(m.serial).getFullYear();
+    const e = byYear.get(y) || { total: 0, count: 0 };
+    e.total += m.total;
+    e.count++;
+    byYear.set(y, e);
+  });
+  const years = [...byYear.keys()].sort((a, b) => a - b);
+  const latest = years[years.length - 1];
+  const points = pseudoMonths(years.map(String), selected.serial).map((p, i) => {
+    const e = byYear.get(years[i]);
+    // Tantya: average ng mga buwang may data × 12 (pinakabagong taon lang, kapag kulang pa sa 12 buwan)
+    return { ...p, total: e.total, count: e.count, proj: years[i] === latest && e.count < 12 ? e.total / e.count * 12 : null };
+  });
+  renderColumnChart(container, points, {
+    value: p => p.total,
+    ghost: p => p.proj,
+    selectedLabel: String(serialToDate(selected.serial).getFullYear()),
+    label: p => compactPeso(p.total),
+    tooltip: p => [[p.label], [formatCurrency(p.total), null, true], [`${p.count} buwan may data`],
+      ...(p.proj ? [[`Tantya sa buong taon: ${formatCurrency(p.proj)}`]] : [])],
+    clickable: false,
+    ariaLabel: 'Koleksyon bawat taon'
+  });
+}
+
+// ---- Trend: buwanang koleksyon + 12-buwang moving average ----
+function renderTrendChart(container, all, months) {
+  const avg = new Map();
+  all.forEach((m, i) => {
+    if (i < 11) return; // kailangan ng 12 buwan
+    avg.set(m.label, all.slice(i - 11, i + 1).reduce((s, x) => s + x.total, 0) / 12);
+  });
+  renderLineChart(container, months, [
+    { name: 'Bawat buwan', color: CHART.soft, value: m => m.total },
+    { name: '12-buwang average', color: CHART.accent, value: m => (avg.has(m.label) ? avg.get(m.label) : null) }
+  ], {
+    zeroBased: true,
+    format: v => formatCurrency(v),
+    ariaLabel: 'Trend ng koleksyon, 12-buwang average',
+    legendEl: document.getElementById('chartTrendLegend')
+  });
+}
+
+// ---- Pagbabago bawat buwan: diverging columns mula sa 0 (blue = tumaas, orange = bumaba) ----
+function renderChangeChart(container, all, months, selectedLabel) {
+  container.querySelectorAll('svg').forEach(s => s.remove());
+  const prevOf = new Map(all.map((m, i) => [m.label, i > 0 ? all[i - 1] : null]));
+  const diff = m => (prevOf.get(m.label) ? m.total - prevOf.get(m.label).total : null);
+
+  const width = container.clientWidth, height = CHART.height;
+  const margin = { top: 22, right: 8, bottom: 26, left: 48 };
+  const svg = svgEl('svg', { width, height, role: 'img', 'aria-label': 'Pagbabago ng koleksyon bawat buwan' });
+  container.prepend(svg);
+
+  const vals = months.map(diff).filter(v => v != null);
+  const { max, step } = niceScale(Math.max(...vals.map(Math.abs), 0));
+  const y = drawAxes(svg, { width, height, margin, scale: { min: -max, max, step },
+    tick: v => (v < 0 ? '−' : '') + compactPeso(Math.abs(v)) });
+  const zero = y(0);
+  svgEl('line', { x1: margin.left, x2: width - margin.right, y1: zero, y2: zero, stroke: CHART.axis, 'shape-rendering': 'crispEdges' }, svg);
+  const band = (width - margin.left - margin.right) / months.length;
+  const xCenter = i => margin.left + band * (i + 0.5);
+  const barW = Math.min(24, band * 0.6);
+  const tip = chartTip(container);
+
+  months.forEach((m, i) => {
+    const v = diff(m);
+    const prev = prevOf.get(m.label);
+    const up = v >= 0, color = up ? CHART.accent : CHART.water;
+    const selected = m.label === selectedLabel;
+    if (v) {
+      const top = Math.min(y(v), zero), h = Math.abs(y(v) - zero);
+      svgEl('rect', { x: xCenter(i) - barW / 2, y: top, width: barW, height: Math.max(h, 1), rx: Math.min(3, h / 2),
+        fill: color, opacity: selected || !selectedLabel ? 1 : 0.55 }, svg);
+      if (selected) {
+        const t = svgEl('text', { x: xCenter(i), y: up ? y(v) - 7 : y(v) + 15, 'text-anchor': 'middle', 'font-size': 11, 'font-weight': 600, fill: CHART.ink }, svg);
+        t.textContent = `${up ? '▲' : '▼'} ${compactPeso(Math.abs(v))}`;
+      }
+    }
+    const hit = svgEl('rect', { x: margin.left + band * i, y: margin.top, width: band, height: height - margin.bottom - margin.top,
+      fill: 'transparent', style: 'cursor:pointer' }, svg);
+    hit.addEventListener('mouseenter', () => tip.show(v == null ? [[m.label], ['Walang naunang buwan']] : [
+      [m.label],
+      [`${up ? '▲' : '▼'} ${formatCurrency(Math.abs(v))}${prev.total ? ` (${(v / prev.total * 100).toFixed(1)}%)` : ''}`, color, true],
+      [`${prev.label}: ${formatCurrency(prev.total)} → ${formatCurrency(m.total)}`]
+    ], xCenter(i), v == null ? zero : Math.min(y(v), zero)));
+    hit.addEventListener('mouseleave', () => tip.hide());
+    hit.addEventListener('click', () => selectSummaryMonth(m.label));
+  });
+  xLabels(svg, months, xCenter, height, band);
+}
+
+// ---- Hati ng singil: 100% stacked (Rent / Tubig / Kuryente / Internet-Others) ----
+function renderShareChart(container, months, selectedLabel) {
+  const partsSum = m => BREAKDOWN.reduce((s, b) => s + m[b.key], 0);
+  renderStackedColumnChart(container, months, BREAKDOWN.map(b => ({
+    key: b.key, name: b.name, color: b.color,
+    value: m => (partsSum(m) > 0 ? m[b.key] / partsSum(m) * 100 : null)
+  })), {
+    selectedLabel,
+    scale: { max: 100, step: 25 },
+    tick: v => v + '%',
+    format: (v, s, m) => `${v.toFixed(1)}% · ${formatCurrency(m[s.key])}`,
+    totalLabel: false,
+    ariaLabel: 'Hati ng singil bawat buwan',
+    legendEl: document.getElementById('chartShareLegend')
+  });
+}
+
+// Kulay ng kwarto, kapareho ng roomSeries (unang 4 may sariling kulay; ang sobra ay "Iba pa")
+function roomColor(room) {
+  const i = allRooms().indexOf(room);
+  return i >= 0 && i < SLOTS.length ? SLOTS[i] : OTHER_COLOR;
+}
+
+// ---- Timeline ng mga tenant: Gantt, isang bar bawat tenant (unang hanggang huling buwan sa range) ----
+function renderTenantTimeline(container, months) {
+  container.querySelectorAll('svg').forEach(s => s.remove());
+  const index = new Map(months.map((m, i) => [m.label, i]));
+  const tenants = [];
+  workbook.SheetNames.forEach((name, sheetIdx) => {
+    const labels = parseSheet(name).data
+      .filter(r => r && typeof r[0] === 'number' && typeof r[18] === 'number')
+      .sort((a, b) => a[0] - b[0])
+      .map(r => excelDateToFullMonthYear(r[0]));
+    const inRange = labels.map(l => index.get(l)).filter(i => i != null);
+    if (!inRange.length) return;
+    tenants.push({
+      name, room: roomOf(name), archived: isArchived(sheetIdx),
+      from: Math.min(...inRange), to: Math.max(...inRange),
+      firstLabel: labels[0], lastLabel: labels[labels.length - 1], count: new Set(labels).size
+    });
+  });
+  tenants.sort((a, b) => a.from - b.from || a.to - b.to || a.name.localeCompare(b.name));
+
+  const legend = document.getElementById('chartTimelineLegend');
+  legend.innerHTML = '';
+  roomSeries('roomTotal').forEach(s => {
+    const item = document.createElement('span');
+    item.innerHTML = '<i class="square"></i>';
+    item.firstChild.style.background = s.color;
+    item.append(s.name);
+    legend.appendChild(item);
+  });
+  const note = document.createElement('span');
+  note.innerText = 'maputla = archived';
+  legend.appendChild(note);
+
+  const rowH = 22, gap = 4;
+  const margin = { top: 4, right: 8, bottom: 26, left: 130 };
+  const width = container.clientWidth;
+  const height = margin.top + tenants.length * rowH + margin.bottom;
+  container.style.height = height + 'px';
+  const svg = svgEl('svg', { width, height, role: 'img', 'aria-label': 'Timeline ng mga tenant' });
+  container.prepend(svg);
+
+  const band = (width - margin.left - margin.right) / months.length;
+  const xCenter = i => margin.left + band * (i + 0.5);
+  const tip = chartTip(container);
+  // Mahinang guhit sa bawat taon, para madaling bilangin
+  months.forEach((m, i) => {
+    if (i > 0 && serialToDate(m.serial).getMonth() === 0) {
+      const x = margin.left + band * i;
+      svgEl('line', { x1: x, x2: x, y1: margin.top, y2: height - margin.bottom, stroke: CHART.grid, 'shape-rendering': 'crispEdges' }, svg);
+    }
+  });
+
+  tenants.forEach((t, r) => {
+    const yTop = margin.top + r * rowH;
+    const label = svgEl('text', { x: 0, y: yTop + rowH / 2 + 4, 'font-size': 12, fill: t.archived ? CHART.muted : CHART.ink }, svg);
+    label.textContent = t.name.length > 18 ? t.name.slice(0, 17) + '…' : t.name;
+    const x = margin.left + band * t.from + 1;
+    svgEl('rect', { x, y: yTop + gap / 2, width: Math.max(band * (t.to - t.from + 1) - 2, 2), height: rowH - gap, rx: 4,
+      fill: roomColor(t.room), opacity: t.archived ? 0.45 : 1 }, svg);
+    const hit = svgEl('rect', { x: 0, y: yTop, width, height: rowH, fill: 'transparent', style: 'cursor:pointer' }, svg);
+    hit.addEventListener('mouseenter', () => tip.show([[t.name],
+      [`${t.room ? 'Room ' + t.room + ' · ' : ''}${t.archived ? 'archived' : 'active'}`, roomColor(t.room)],
+      [`${t.firstLabel} – ${t.lastLabel}`, null, true], [`${t.count} buwan`]], xCenter(t.from), yTop));
+    hit.addEventListener('mouseleave', () => tip.hide());
+    hit.addEventListener('click', () => { showView('receipt'); openTenantMonth(t.name, t.lastLabel); });
+  });
+  xLabels(svg, months, xCenter, height, band);
+}
+
+// ---- Gaano katagal tumira: histogram ng ilang buwang may singil, lahat ng tenant ----
+function renderTenureChart(container) {
+  const buckets = [['1–3', 1, 3], ['4–6', 4, 6], ['7–12', 7, 12], ['13–24', 13, 24], ['25+', 25, Infinity]];
+  const names = buckets.map(() => []);
+  workbook.SheetNames.forEach(name => {
+    const n = new Set(parseSheet(name).data
+      .filter(r => r && typeof r[0] === 'number' && typeof r[18] === 'number')
+      .map(r => excelDateToFullMonthYear(r[0]))).size;
+    const k = buckets.findIndex(([, lo, hi]) => n >= lo && n <= hi);
+    if (k >= 0) names[k].push(name);
+  });
+  const points = pseudoMonths(buckets.map(b => b[0] + ' buwan'), 0).map((p, i) => ({ ...p, names: names[i] }));
+  const max = Math.max(...names.map(l => l.length), 1);
+  renderColumnChart(container, points, {
+    value: p => p.names.length,
+    scale: max <= 8 ? { max, step: 1 } : niceScale(max),
+    tick: v => String(v),
+    selectedLabel: null,
+    label: p => String(p.names.length),
+    tooltip: p => [[p.label], [`${p.names.length} ${p.names.length === 1 ? 'tenant' : 'tenants'}`, null, true],
+      ...(p.names.length ? [[p.names.length > 8 ? p.names.slice(0, 8).join(', ') + ` at ${p.names.length - 8} pa` : p.names.join(', ')]] : [])],
+    clickable: false,
+    ariaLabel: 'Gaano katagal tumira ang mga tenant'
+  });
+}
+
+// Tantyang nawalang kita sa bakante, bawat buwan: label -> { items: [[room, rent]], sum }
+// Ginagamit din ng highlights.js
+function lostRentByMonth(months) {
+  // Kasaysayan ng rent bawat kwarto (col B), luma -> bago
+  const history = {};
+  workbook.SheetNames.forEach(name => {
+    const room = roomOf(name);
+    if (!room) return;
+    parseSheet(name).data.forEach(r => {
+      if (r && typeof r[0] === 'number' && typeof r[1] === 'number' && r[1] > 0) (history[room] = history[room] || []).push([r[0], r[1]]);
+    });
+  });
+  Object.values(history).forEach(h => h.sort((a, b) => a[0] - b[0]));
+  // Huling rent bago ang buwan; kung wala pa, ang unang rent pagkatapos
+  const rentFor = (room, m) => {
+    const h = history[room] || [];
+    const time = monthLabelTime(m.label);
+    const before = h.filter(([s]) => serialToDate(s).getTime() < time);
+    return before.length ? before[before.length - 1][1] : (h.length ? h[0][1] : 0);
+  };
+  const occ = occupancyByMonth();
+  return new Map(months.map(m => {
+    const vacant = roomsOpenIn(m.label).filter(r => !(occ.get(m.label) || new Set()).has(r));
+    const items = vacant.map(r => [r, rentFor(r, m)]);
+    return [m.label, { items, sum: items.reduce((s, [, v]) => s + v, 0) }];
+  }));
+}
+
+// ---- Tantyang nawalang kita sa bakante: Σ huling rent ng bawat bukas at bakanteng kwarto ----
+function renderLostRentChart(container, months, selectedLabel) {
+  const lost = lostRentByMonth(months);
+  renderColumnChart(container, months, {
+    value: m => lost.get(m.label).sum,
+    selectedLabel,
+    color: CHART.water,
+    softColor: ORANGE_RAMP[1],
+    label: m => compactPeso(lost.get(m.label).sum),
+    tooltip: m => {
+      const l = lost.get(m.label);
+      return [[m.label], [formatCurrency(l.sum), null, true],
+        l.items.length ? [`Bakante: ${l.items.map(([r, v]) => `Room ${r} (${compactPeso(v)})`).join(', ')}`] : ['Walang bakante']];
+    },
+    ariaLabel: 'Tantyang nawalang kita sa bakante'
+  });
+}
+
+// ---- Upa bawat kwarto: step line; may puwang kapag bakante ----
+function renderRoomRentChart(container, months) {
+  renderLineChart(container, months, roomSeries('roomRent'), {
+    step: true,
+    zeroBased: false,
+    format: v => formatCurrency(v),
+    ariaLabel: 'Upa bawat kwarto',
+    legendEl: document.getElementById('chartRoomRentLegend')
+  });
+}
+
+// ---- Seasonality: average na kWh o m³ bawat buwan ng taon (Jan–Dec), lahat ng taon ----
+function renderSeasonChart(container, all, selected, field) {
+  const isKwh = field === 'kwh';
+  const fmt = v => (isKwh ? Math.round(v).toLocaleString('en-PH') + ' kWh' : v.toLocaleString('en-PH', { maximumFractionDigits: 1 }) + ' m³');
+  const short = i => new Date(2000, i, 1).toLocaleString('en-US', { month: 'short' });
+  const points = pseudoMonths([...Array(12).keys()].map(short), selected.serial).map((p, i) => {
+    const list = all.filter(m => serialToDate(m.serial).getMonth() === i && m[field] > 0);
+    return {
+      ...p, label: new Date(2000, i, 1).toLocaleString('en-US', { month: 'long' }),
+      avg: list.length ? list.reduce((s, m) => s + m[field], 0) / list.length : 0,
+      years: list.map(m => serialToDate(m.serial).getFullYear())
+    };
+  });
+  renderColumnChart(container, points, {
+    value: p => p.avg,
+    selectedLabel: points[serialToDate(selected.serial).getMonth()].label,
+    color: isKwh ? CHART.accent : CHART.water,
+    softColor: isKwh ? CHART.soft : ORANGE_RAMP[1],
+    tick: v => v.toLocaleString('en-PH', { maximumFractionDigits: 0 }),
+    label: p => fmt(p.avg),
+    tooltip: p => [[p.label], [p.years.length ? fmt(p.avg) : 'walang data', null, true],
+      ...(p.years.length ? [[`average ng ${p.years.length} taon (${p.years.join(', ')})`]] : [])],
+    clickable: false,
+    ariaLabel: isKwh ? 'Average na kWh bawat buwan ng taon' : 'Average na m³ bawat buwan ng taon'
   });
 }
 

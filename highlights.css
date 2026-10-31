@@ -4,7 +4,8 @@
 
 /* ---------- Mga highlight card ---------- */
 .hl-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
-@media (min-width: 1100px) { .hl-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } } /* 8 card = 2 pantay na row */
+@media (min-width: 900px) { .hl-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (min-width: 1200px) { .hl-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); } } /* 12 card = 2 row na tig-6 */
 .hl-card {
   position: relative; display: flex; flex-direction: column; gap: 4px; min-width: 0;
   padding: 16px 18px; border: 1.5px solid transparent; border-radius: 14px;
@@ -12,7 +13,7 @@
 }
 .hl-label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
 .hl-value { font-size: 18px; font-weight: 600; color: var(--brand-dark); line-height: 1.3; }
-.hl-detail { font-size: 12.5px; color: var(--muted); line-height: 1.45; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hl-detail { font-size: 12.5px; color: var(--muted); line-height: 1.45; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
 
 /* ---------- "Lahat ng tenant" table ---------- */
 .hl-table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; }
@@ -33,12 +34,14 @@
 /* Mga seksyon ng Top 5 (Mga tenant, Mga buwan, …), tig-4 na card: 4 bawat row sa malapad, 2 sa katamtaman, 1 sa cellphone */
 .hl-rank-sections { display: flex; flex-direction: column; gap: 20px; }
 .hl-rank-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
-@media (min-width: 700px) { .hl-rank-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (min-width: 1300px) { .hl-rank-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (min-width: 700px) { .hl-rank-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } } /* 8 card = 4 row na tig-2 */
 @media (min-width: 1100px) { .hl-rank-grid.cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); } } /* Top 10: 3 card */
 .hl-rank { min-width: 0; padding: 18px; border-radius: 14px; background: #fff; box-shadow: var(--card-shadow); }
 .hl-rank-head h3 { margin: 0; font-size: 15px; font-weight: 600; }
-.hl-rank-head p { margin: 2px 0 10px; font-size: 12px; }
+.hl-rank-head p { /* laging 2 linya ang taas, para pantay ang simula ng listahan sa bawat card */
+  margin: 2px 0 10px; font-size: 12px; line-height: 1.4; min-height: 2.8em;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden;
+}
 .hl-rank-list { list-style: none; margin: 0; padding: 0; }
 .hl-rank-list li { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 9px 0; border-top: 1px solid var(--line); }
 .rank-no { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; background: var(--tint); color: var(--brand-dark); font-size: 12px; font-weight: 700; }

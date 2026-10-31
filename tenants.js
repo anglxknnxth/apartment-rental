@@ -4,8 +4,9 @@
 // Sariling file ito: ito mismo ang gumagawa ng tab button at ng section. Naka-load pagkatapos ng
 // dashboard.js at highlights.js, at gumagamit ng mga global mula sa index.html at dashboard.js:
 //   workbook, currentTenant, tenantSelect, parseSheet, isArchived, roomOf, formatCurrency,
-//   excelDateToFullMonthYear, shortMonthYear, renderColumnChart,
-//   renderLineChart, compactPeso, CHART, showView, VIEWS (renderColumnChart: color/clickable options)
+//   excelDateToFullMonthYear, shortMonthYear, serialToDate, renderColumnChart, renderLineChart,
+//   renderStackedColumnChart, renderGroupedColumnChart, renderBreakdownChart, monthlyTotals, rampColor,
+//   BLUE_RAMP, BREAKDOWN, OTHER_COLOR, compactPeso, CHART, showView, VIEWS (renderColumnChart: color/clickable options)
 //   at mula sa highlights.js: highlightRankLists, tenantStats, monthChanges, HL_MIN_MONTHS
 //
 // Nire-render kapag binuksan ang tab ('view-shown') o kapag may bagong data ('workbook-loaded').
@@ -59,6 +60,29 @@ let profileTenant = null; // tenant na ipinapakita sa tab na ito
         <h3>Bill bawat buwan</h3>
         <p class="muted">Total Amount · naka-highlight ang pinakabagong buwan</p>
         <div class="chart" id="tpChartBill"></div>
+      </div>
+      <div class="card span-2">
+        <h3>Hati ng bill bawat buwan</h3>
+        <p class="muted">Rent, Tubig, Kuryente at Internet/Others · naka-highlight ang pinakabagong buwan</p>
+        <div class="chart-legend" id="tpChartSplitLegend"></div>
+        <div class="chart" id="tpChartSplit"></div>
+      </div>
+      <div class="card">
+        <h3>Kabuuang hati ng naibayad</h3>
+        <p class="muted">Lahat ng buwan niya</p>
+        <div class="chart chart-breakdown" id="tpChartBreakdown"></div>
+      </div>
+      <div class="card">
+        <h3>Bill niya vs average</h3>
+        <p class="muted">Kumpara sa average na bill ng lahat ng tenant sa parehong buwan</p>
+        <div class="chart-legend" id="tpChartVsAvgLegend"></div>
+        <div class="chart" id="tpChartVsAvg"></div>
+      </div>
+      <div class="card span-2">
+        <h3>Bill bawat taon</h3>
+        <p class="muted">Jan–Dec, isang column bawat taon na may singil siya</p>
+        <div class="chart-legend" id="tpChartYearsLegend"></div>
+        <div class="chart" id="tpChartYears"></div>
       </div>
       <!-- Hiwalay ang kuryente at tubig: malaki ang agwat ng halaga nila, kaya may sariling axis ang bawat isa.
            Isang row bawat isa: singil (₱) sa kaliwa, konsumo sa kanan. -->
@@ -200,14 +224,40 @@ function renderTenantProfile() {
     return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
   };
   const highest = months.reduce((a, m) => (!a || m.total > a.total ? m : a), null);
+  const lowest = months.reduce((a, m) => (!a || m.total < a.total ? m : a), null);
   const kwh = avgOf('kwh'), m3 = avgOf('m3');
+  const sumOf = key => months.reduce((s, m) => s + (m[key] || 0), 0);
+  const kwhText = v => Math.round(v).toLocaleString('en-PH') + ' kWh';
+  const m3Text = v => v.toLocaleString('en-PH', { maximumFractionDigits: 1 }) + ' m³';
+  // Upa: ang huling rent, at ilang beses itong tumaas
+  const rents = months.filter(m => m.rent > 0);
+  const raises = rents.filter((m, i) => i > 0 && m.rent > rents[i - 1].rent).length;
+  // Ngayong taon (YTD): Jan hanggang sa pinakabagong buwan niya, kumpara sa parehong panahon noong nakaraang taon
+  let ytd = null;
+  if (months.length) {
+    const lastDate = serialToDate(months[months.length - 1].serial);
+    const year = lastDate.getFullYear(), upTo = lastDate.getMonth();
+    const inYear = y => months.filter(m => { const d = serialToDate(m.serial); return d.getFullYear() === y && d.getMonth() <= upTo; });
+    const cur = inYear(year).reduce((s, m) => s + m.total, 0);
+    const prevList = inYear(year - 1), prev = prevList.reduce((s, m) => s + m.total, 0);
+    const pct = prev ? (cur - prev) / prev * 100 : null;
+    ytd = { year, cur, sub: !prevList.length ? `unang taon niya ang ${year}`
+      : `${pct >= 0 ? '▲' : '▼'} ${Math.abs(pct).toFixed(1)}% kumpara sa ${year - 1}` };
+  }
   const tiles = [
     ['Kabuuang naibayad', formatCurrency(total), true],
     ['Ilang buwan', String(months.length)],
     ['Average na bill', months.length ? formatCurrency(total / months.length) : '-'],
     ['Pinakamataas na bill', highest ? `${formatCurrency(highest.total)}` : '-', false, highest ? shortMonthYear(highest.serial) : ''],
-    ['Average kWh / buwan', kwh != null ? Math.round(kwh).toLocaleString('en-PH') + ' kWh' : '-'],
-    ['Average m³ / buwan', m3 != null ? m3.toLocaleString('en-PH', { maximumFractionDigits: 1 }) + ' m³' : '-']
+    ['Average kWh / buwan', kwh != null ? kwhText(kwh) : '-'],
+    ['Average m³ / buwan', m3 != null ? m3Text(m3) : '-'],
+    ['Pinakamababang bill', lowest ? formatCurrency(lowest.total) : '-', false, lowest ? shortMonthYear(lowest.serial) : ''],
+    ['Kasalukuyang upa', rents.length ? formatCurrency(rents[rents.length - 1].rent) : '-', false,
+      rents.length ? (raises ? `tumaas nang ${raises} beses` : 'hindi nagbago') : ''],
+    ['Kabuuang kuryente', formatCurrency(sumOf('elec')), false, kwhText(sumOf('kwh'))],
+    ['Kabuuang tubig', formatCurrency(sumOf('water')), false, m3Text(sumOf('m3'))],
+    ['Kabuuang internet/others', formatCurrency(sumOf('internet') + sumOf('others'))],
+    [ytd ? `Ngayong taon (${ytd.year})` : 'Ngayong taon', ytd ? formatCurrency(ytd.cur) : '-', false, ytd ? ytd.sub : '']
   ];
   const tilesBox = document.getElementById('tpTiles');
   tilesBox.innerHTML = '';
@@ -316,6 +366,24 @@ function renderTenantInsights(name, months) {
     line.append(strong, ` · ${formatCurrency(jump.prevTotal)} → ${formatCurrency(jump.total)} (+${formatCurrency(jump.diff)}${jump.pct != null ? `, +${jump.pct.toFixed(1)}%` : ''})`);
     list.appendChild(line);
   }
+  // D) Pinakamalaking pagbaba ng bill niya
+  const drop = monthChanges().filter(c => c.name === name && c.diff < 0).sort((a, b) => a.diff - b.diff)[0];
+  if (drop) {
+    const line = document.createElement('div');
+    const strong = document.createElement('strong');
+    strong.innerText = `Pinakamalaking pagbaba: ${shortMonthYear(drop.serial)}`;
+    line.append(strong, ` · ${formatCurrency(drop.prevTotal)} → ${formatCurrency(drop.total)} (−${formatCurrency(-drop.diff)}${drop.pct != null ? `, −${Math.abs(drop.pct).toFixed(1)}%` : ''})`);
+    list.appendChild(line);
+  }
+  // E) Ranggo sa kwarto: ayon sa kabuuang naibayad, sa mga naging tenant ng parehong kwarto
+  const roommates = me.room ? stats.filter(t => t.room === me.room && t.months > 0).sort((a, b) => b.total - a.total) : [];
+  if (roommates.length >= 2) {
+    const line = document.createElement('div');
+    const strong = document.createElement('strong');
+    strong.innerText = `#${roommates.findIndex(t => t.name === name) + 1} sa ${roommates.length} naging tenant ng Room ${me.room}`;
+    line.append(strong, ' · ayon sa kabuuang naibayad');
+    list.appendChild(line);
+  }
   box.appendChild(list);
 }
 
@@ -329,6 +397,51 @@ function renderTenantCharts(months) {
     ariaLabel: 'Bill bawat buwan',
     clickable: false
   });
+  // Hati ng bill bawat buwan (stacked) at kabuuang hati (donut)
+  const partOf = (m, key) => (key === 'otherAll' ? m.internet + m.others : m[key]);
+  renderStackedColumnChart(document.getElementById('tpChartSplit'), months,
+    BREAKDOWN.map(b => ({ name: b.name, color: b.color, value: m => partOf(m, b.key) })), {
+      selectedLabel: latest,
+      clickable: false,
+      ariaLabel: 'Hati ng bill bawat buwan',
+      legendEl: document.getElementById('tpChartSplitLegend')
+    });
+  const sum = key => months.reduce((s, m) => s + m[key], 0);
+  renderBreakdownChart(document.getElementById('tpChartBreakdown'),
+    { rent: sum('rent'), water: sum('water'), elec: sum('elec'), internet: sum('internet'), others: sum('others') });
+
+  // Bill niya vs average na bill bawat tenant ng lahat sa parehong buwan
+  const avgByLabel = new Map(monthlyTotals().map(m => [m.label, m.tenantCount ? m.total / m.tenantCount : null]));
+  renderLineChart(document.getElementById('tpChartVsAvg'), months, [
+    { name: 'Bill niya', color: CHART.accent, value: m => m.total },
+    { name: 'Average ng lahat', color: OTHER_COLOR, value: m => (avgByLabel.has(m.label) ? avgByLabel.get(m.label) : null) }
+  ], {
+    zeroBased: true,
+    format: v => formatCurrency(v),
+    ariaLabel: 'Bill niya kumpara sa average ng lahat ng tenant',
+    legendEl: document.getElementById('tpChartVsAvgLegend')
+  });
+
+  // Bill bawat taon, Jan–Dec: maputla ang mga lumang taon, accent ang pinakabago (kapareho ng YoY sa Dashboard)
+  const yearOf = m => serialToDate(m.serial).getFullYear();
+  const years = [...new Set(months.map(yearOf))].sort((a, b) => a - b);
+  const byYearMonth = new Map(months.map(m => [`${yearOf(m)}-${serialToDate(m.serial).getMonth()}`, m.total]));
+  const calendar = [...Array(12).keys()].map(i => {
+    const d = new Date(2000, i, 1);
+    return { label: d.toLocaleString('en-US', { month: 'long' }).toUpperCase(), short: d.toLocaleString('en-US', { month: 'short' }), serial: months[0].serial, i };
+  });
+  const older = years.length - 1;
+  renderGroupedColumnChart(document.getElementById('tpChartYears'), calendar, years.map((y, k) => ({
+    name: String(y),
+    color: k === older ? CHART.accent : rampColor(BLUE_RAMP, older > 1 ? 0.1 + 0.25 * k / (older - 1) : 0.3),
+    value: c => (byYearMonth.has(`${y}-${c.i}`) ? byYearMonth.get(`${y}-${c.i}`) : null)
+  })), {
+    format: v => formatCurrency(v),
+    ariaLabel: 'Bill bawat taon',
+    legendEl: document.getElementById('tpChartYearsLegend'),
+    clickable: false
+  });
+
   renderColumnChart(document.getElementById('tpChartElec'), months, {
     value: m => m.elec,
     label: m => compactPeso(m.elec),

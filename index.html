@@ -384,7 +384,7 @@
         <div class="chart chart-breakdown" id="chartBreakdown"></div>
       </div>
       <div class="card">
-        <h3>Ngayong taon vs nakaraang taon</h3>
+        <h3>Ngayong taon vs mga nakaraang taon</h3>
         <p class="muted" id="yoySummary"></p>
         <div class="chart-legend" id="chartYoyLegend"></div>
         <div class="chart" id="chartYoy"></div>
@@ -393,6 +393,37 @@
         <h3>Average na bill bawat tenant</h3>
         <p class="muted">Kabuuang koleksyon ÷ bilang ng tenant na may singil, <span class="range-text">2 taon</span> hanggang sa napiling buwan</p>
         <div class="chart" id="chartAvgBill"></div>
+      </div>
+      <div class="card">
+        <h3>Naipong koleksyon</h3>
+        <p class="muted">Kabuuan mula sa unang buwan sa sheet, <span class="range-text">2 taon</span> hanggang sa napiling buwan</p>
+        <div class="chart" id="chartCumulative"></div>
+      </div>
+      <div class="card">
+        <h3>Koleksyon bawat taon</h3>
+        <p class="muted">Kabuuan bawat taon · dashed = tantya sa buong taon kung tuloy ang average ngayong taon</p>
+        <div class="chart" id="chartYearly"></div>
+      </div>
+      <div class="card span-2">
+        <h3>Trend ng koleksyon</h3>
+        <p class="muted">Buwanang koleksyon at ang 12-buwang average nito, <span class="range-text">2 taon</span> hanggang sa napiling buwan</p>
+        <div class="chart-legend" id="chartTrendLegend"></div>
+        <div class="chart" id="chartTrend"></div>
+      </div>
+      <div class="card span-2">
+        <h3>Pagbabago bawat buwan</h3>
+        <p class="muted">Itinaas o ibinaba ng koleksyon kumpara sa nakaraang buwan · i-click ang column para piliin ang buwan</p>
+        <div class="chart-legend">
+          <span><i class="square" style="background:#2a78d6"></i>Tumaas</span>
+          <span><i class="square" style="background:#eb6834"></i>Bumaba</span>
+        </div>
+        <div class="chart" id="chartChange"></div>
+      </div>
+      <div class="card span-2">
+        <h3>Hati ng singil</h3>
+        <p class="muted">Bahagi ng Rent, Tubig, Kuryente at Internet/Others sa singil bawat buwan, <span class="range-text">2 taon</span> · i-click ang column para piliin ang buwan</p>
+        <div class="chart-legend" id="chartShareLegend"></div>
+        <div class="chart" id="chartShare"></div>
       </div>
     </div>
 
@@ -409,10 +440,38 @@
         <div class="chart" id="chartOccupancy"></div>
       </div>
       <div class="card span-2">
+        <h3>Kailan bakante ang kwarto</h3>
+        <p class="muted"><span class="range-text">2 taon</span> hanggang sa napiling buwan · ang tenant ay makikita kapag tinapatan ng mouse · i-click para piliin ang buwan</p>
+        <div class="chart-legend" id="chartVacancyLegend"></div>
+        <div class="chart" id="chartVacancy"></div>
+      </div>
+      <div class="card span-2">
         <h3>Koleksyon bawat kwarto, <span class="range-text">2 taon</span></h3>
         <p class="muted">Ambag ng bawat kwarto sa kabuuang koleksyon · i-click ang column para piliin ang buwan</p>
         <div class="chart-legend" id="chartRoomStackLegend"></div>
         <div class="chart" id="chartRoomStack"></div>
+      </div>
+      <div class="card span-2">
+        <h3>Timeline ng mga tenant</h3>
+        <p class="muted">Mula unang hanggang huling buwan ng bawat tenant, <span class="range-text">2 taon</span> hanggang sa napiling buwan · i-click para buksan ang resibo</p>
+        <div class="chart-legend" id="chartTimelineLegend"></div>
+        <div class="chart" id="chartTimeline"></div>
+      </div>
+      <div class="card">
+        <h3>Gaano katagal tumira</h3>
+        <p class="muted">Ilang tenant ayon sa dami ng buwang may singil (lahat ng tenant; tuloy pa ang bilang ng active)</p>
+        <div class="chart" id="chartTenure"></div>
+      </div>
+      <div class="card">
+        <h3>Tantyang nawalang kita sa bakante</h3>
+        <p class="muted">Huling rent ng bawat bakanteng kwarto, <span class="range-text">2 taon</span> · i-click ang column para piliin ang buwan</p>
+        <div class="chart" id="chartLostRent"></div>
+      </div>
+      <div class="card span-2">
+        <h3>Upa bawat kwarto</h3>
+        <p class="muted">Rent (col B) ng bawat kwarto, <span class="range-text">2 taon</span> hanggang sa napiling buwan · may puwang kapag bakante</p>
+        <div class="chart-legend" id="chartRoomRentLegend"></div>
+        <div class="chart" id="chartRoomRent"></div>
       </div>
     </div>
 
@@ -420,20 +479,9 @@
     <div class="chart-grid">
       <div class="card span-2">
         <h3>Kuryente at tubig</h3>
-        <p class="muted">Kabuuan ng lahat ng tenant, <span class="range-text">2 taon</span> hanggang sa napiling buwan</p>
+        <p class="muted">Kabuuan ng lahat ng tenant, <span class="range-text">2 taon</span> hanggang sa napiling buwan · i-click ang column para piliin ang buwan</p>
         <div class="chart-legend" id="chartUtilitiesLegend"></div>
         <div class="chart" id="chartUtilities"></div>
-      </div>
-      <div class="card">
-        <h3>Rate ng kuryente bawat kwarto (₱/kWh)</h3>
-        <p class="muted">Singil sa kuryente ÷ kWh ng bawat kwarto, <span class="range-text">2 taon</span> hanggang sa napiling buwan</p>
-        <div class="chart-legend" id="chartRateLegend"></div>
-        <div class="chart" id="chartRate"></div>
-      </div>
-      <div class="card">
-        <h3>Rate ng tubig (₱/m³)</h3>
-        <p class="muted">Average na singil bawat m³ ng lahat ng tenant, <span class="range-text">2 taon</span> hanggang sa napiling buwan</p>
-        <div class="chart" id="chartWaterRate"></div>
       </div>
       <div class="card">
         <h3>Konsumo ng kuryente bawat kwarto (kWh)</h3>
@@ -446,6 +494,16 @@
         <p class="muted"><span class="range-text">2 taon</span> hanggang sa napiling buwan · mas madilim = mas malaking konsumo · may value ang napiling buwan</p>
         <div class="chart-legend" id="chartRoomM3Legend"></div>
         <div class="chart" id="chartRoomM3"></div>
+      </div>
+      <div class="card">
+        <h3>Seasonality ng kuryente (kWh)</h3>
+        <p class="muted">Average na kWh ng lahat ng kwarto bawat buwan ng taon, lahat ng taon</p>
+        <div class="chart" id="chartSeasonKwh"></div>
+      </div>
+      <div class="card">
+        <h3>Seasonality ng tubig (m³)</h3>
+        <p class="muted">Average na m³ ng lahat ng kwarto bawat buwan ng taon, lahat ng taon</p>
+        <div class="chart" id="chartSeasonM3"></div>
       </div>
     </div>
 
