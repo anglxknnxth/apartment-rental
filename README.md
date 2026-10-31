@@ -40,7 +40,6 @@ Sa screen, pinaliliit ang resibo para kasya sa window, pero buong laki pa rin an
 
 ### Dashboard
 - Kabuuan ng **lahat ng tenant** para sa isang buwan: Rent, Tubig, Kuryente, Internet/Others at **Total**.
-- **Paalala sa itaas ng mga tile:** nagsimula ang paupahan noong March 2023, pero mula January 2024 lang ang data sa sheet (wala ang data nina Aling Shirley, Katrina Mendoza at Marielle Domil). Nasa `BUSINESS_START` at `MISSING_TENANTS` sa simula ng `dashboard.js` ang mga ito.
 - **Buwan dropdown:** ang kasalukuyang buwan ang default. Piliin ang **ALL (lahat ng buwan)** para makita ang overall: kabuuan ng lahat ng buwan sa tiles, donut, bawat kwarto at table (may "Ilang buwan" bawat tenant), at lahat ng buwan sa mga graph. Sa ALL, bubuksan ng row sa table ang pinakabagong resibo ng tenant.
 - **Mga graph**, nakahati sa 3 seksyon. Ang mga may buwan sa ilalim ay 2 taon (24 buwan) hanggang sa napiling buwan, o lahat ng buwan kapag ALL. Ipinapakita ang eksaktong halaga kapag tinapatan ng mouse, at sa mga column chart, i-click ang column para piliin ang buwang iyon.
   - **Koleksyon:** kabuuang koleksyon bawat buwan · breakdown ng singil (donut chart: Rent, Tubig, Kuryente, Internet/Others, may halaga at %) · ngayong taon vs nakaraang taon (grouped columns, Jan–Dec, may YTD at % pagbabago) · average na bill bawat tenant (columns)

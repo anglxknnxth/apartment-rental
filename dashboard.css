@@ -88,9 +88,6 @@
 
 
 /* Paalala: kulang ang data bago ang unang buwan sa sheet */
-.data-note { position: relative; margin: 0 0 14px; padding: 10px 14px 10px 38px; border-radius: 10px; background: var(--tint); color: var(--muted); font-size: 13px; line-height: 1.55; }
-.data-note::before { content: "i"; position: absolute; left: 13px; top: 11px; width: 16px; height: 16px; border-radius: 50%; background: var(--brand); color: #fff; font-size: 11px; font-weight: 700; font-style: italic; line-height: 16px; text-align: center; }
-.data-note strong { color: var(--brand-dark); font-weight: 600; }
 
 /* Legend: hindi nababali ang "Room 2A"; nagwa-wrap ang buong item kapag kulang ang lapad */
 .chart-legend { flex-wrap: wrap; gap: 6px 16px; }

@@ -1,7 +1,6 @@
 /* Highlights tab: styles. Ang logic ay nasa highlights.js. */
 
 .highlights-view { display: flex; flex-direction: column; gap: 20px; }
-.highlights-view .data-note { margin: 0; }
 
 /* ---------- Mga highlight card ---------- */
 .hl-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
@@ -13,7 +12,7 @@
 }
 .hl-label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
 .hl-value { font-size: 18px; font-weight: 600; color: var(--brand-dark); line-height: 1.3; }
-.hl-detail { font-size: 12.5px; color: var(--muted); line-height: 1.45; }
+.hl-detail { font-size: 12.5px; color: var(--muted); line-height: 1.45; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* ---------- "Lahat ng tenant" table ---------- */
 .hl-table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; }

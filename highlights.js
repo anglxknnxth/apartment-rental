@@ -4,7 +4,7 @@
 // Sariling file ito: ito mismo ang gumagawa ng tab button at ng section. Naka-load pagkatapos ng
 // dashboard.js, at gumagamit ng mga global mula sa index.html at dashboard.js:
 //   workbook, parseSheet, isArchived, roomOf, formatCurrency, excelDateToFullMonthYear, shortMonthYear,
-//   tenantSelect, monthlyTotals, occupancyByMonth, allRooms, roomsOpenIn, serialToDate, renderDataNote,
+//   tenantSelect, monthlyTotals, occupancyByMonth, allRooms, roomsOpenIn, serialToDate,
 //   showView, VIEWS
 //
 // Nire-render kapag binuksan ang tab ('view-shown') o kapag may bagong data ('workbook-loaded').
@@ -33,7 +33,6 @@ const HL_MIN_MONTHS = 3;
           <p class="muted">Mahahalagang detalye mula sa lahat ng data sa Google Sheet</p>
         </div>
       </div>
-      <p class="data-note" id="hlNote"></p>
     </div>
     <div class="hl-grid" id="hlCards"></div>
     <div class="hl-rank-sections" id="hlRanks"></div>
@@ -269,8 +268,6 @@ function renderHighlights() {
   document.querySelectorAll('#viewHighlights > .card, #viewHighlights > .section-title, #hlCards, #hlRanks, #hlTop10').forEach(el => { el.hidden = !hasData; });
   if (!hasData) return;
 
-  renderDataNote(true, document.getElementById('hlNote'));
-
   const stats = tenantStats();
   const months = monthlyTotals();
   const rooms = allRooms();
@@ -296,7 +293,7 @@ function renderHighlights() {
     const vacant = openNow.filter(r => !now.includes(r));
     cards.push({
       label: 'Occupancy', value: `${Math.round(avgPct)}% average`,
-      detail: `Ngayong ${shortMonthYear(latest.serial)}: ${now.length}/${openNow.length} · ${vacant.length ? 'Bakante: ' + vacant.map(r => 'Room ' + r).join(', ') : 'walang bakante'}`
+      detail: `${shortMonthYear(latest.serial)}: ${now.length}/${openNow.length} · ${vacant.length ? 'Bakante: ' + vacant.map(r => 'Rm ' + r).join(', ') : 'walang bakante'}`
     });
   }
   const tenants = stats.filter(t => t.firstSerial != null);
@@ -312,6 +309,7 @@ function renderHighlights() {
       const el = document.createElement('span');
       el.className = cls;
       el.innerText = [c.label, c.value, c.detail][k];
+      if (cls === 'hl-detail') el.title = c.detail; // buong text kapag naputol
       card.appendChild(el);
     });
     grid.appendChild(card);
