@@ -21,20 +21,19 @@ I-double-click ang **`Buksan Resibo.bat`**.
    - Binubuksan ang browser.
 3. **`index.html`** pagka-load:
    - Kinukuha ang published na `.xlsx` mula sa Google Sheet (`SHEET_URL` sa simula ng script).
-   - Pinupuno ang Tenant dropdown. Alphabetical ito, at nakahiwalay ang **Active** at **Archived**.
+   - Ipinapakita sa toast kapag na-update ang data (o kapag may error), at pinupuno ang Tenant dropdown. Alphabetical ito, at nakahiwalay ang **Active** at **Archived**.
    - Kung ang URL ay may `#koleksyon`, ang Koleksyon tab ang unang bubukas.
 
 ## Mga tab
 
 ### Resibo
 1. Pumili ng **Tenant**. Kusang lalabas ang resibo ng **pinakabagong buwan** na may Total Amount.
-2. Puwedeng pumili ng ibang buwan sa **Buwan** dropdown, o i-click ang row sa **Sheet Preview** (pinakabago ang nasa itaas).
+2. Puwedeng pumili ng ibang buwan sa **Buwan** dropdown, o i-click ang row sa **Preview** (pinakabago ang nasa itaas). Buod ang default ng Preview: Date, Rent, Kuryente, Tubig, Internet at Total ng 12 pinakabagong buwan. I-click ang **See more** (katabi ng Export PDF) para makita ang lahat ng column at buwan, at **See less** para bumalik.
 3. Sa itaas ng resibo:
    - **Download as JPEG**: sine-save sa `Rent/<tenant>/<Tenant_Name>-<MONTH>_<YEAR>.jpeg`. Ginagawa ang folder kung wala pa, at laging **pinapalitan** ang lumang file (walang "(1)").
    - **Copy**: kinokopya ang resibo bilang image, para ma-paste (Ctrl+V) sa Messenger o Viber.
-   - **Back**: isinasara ang resibo.
-4. Sa Sheet Preview, ang **Export PDF** ay gumagawa ng iisang PDF ng lahat ng buwan ng tenant, 4 na resibo bawat page. Sine-save ito sa `Rent/<tenant>/<Tenant_Name>-Receipts.pdf`.
-5. Ang **Refresh** ay kumukuha ulit ng data sa Google Sheet, at nananatili ang napiling tenant at buwan.
+4. Sa Preview, ang **Export PDF** ay gumagawa ng iisang PDF ng lahat ng buwan ng tenant, 4 na resibo bawat page. Sine-save ito sa `Rent/<tenant>/<Tenant_Name>-Receipts.pdf`.
+5. Para makuha ang pinakabagong data mula sa Google Sheet, i-reload ang page (F5).
 
 Sa screen, pinaliliit ang resibo para kasya sa window, pero buong laki pa rin ang JPEG at PDF.
 
@@ -67,10 +66,10 @@ Sa screen, pinaliliit ang resibo para kasya sa window, pero buong laki pa rin an
   | R | Other Charges |
   | S | Total Amount |
   | T | Remarks (laging may card sa resibo; blangko kapag walang laman) |
-  | Y1 | Kwarto ng tenant (halimbawa `2A`); lalabas sa Sheet Preview at sa Koleksyon |
+  | Y1 | Kwarto ng tenant (halimbawa `2A`); lalabas sa Preview at sa Koleksyon |
   | U2 | Araw ng due date (halimbawa `1` → due sa ika-1 ng buwan) |
 
-- Naka-**Publish to web** ito bilang `.xlsx` (File → Share → Publish to web). Ilang minuto ang delay bago lumabas ang mga pagbabago, kahit mag-Refresh ka.
+- Naka-**Publish to web** ito bilang `.xlsx` (File → Share → Publish to web). Ilang minuto ang delay bago lumabas ang mga pagbabago, kahit i-reload mo ang page.
 - Dahil naka-publish, **public** ang data para sa kahit sinong may hawak ng link.
 
 ## Mga file
@@ -97,5 +96,5 @@ Gumagana rin ang page sa GitHub Pages (kumukuha pa rin ng data sa Google Sheet),
 |---|---|
 | "Hindi makuha ang Google Sheet kapag binuksan bilang file" | Buksan gamit ang `Buksan Resibo.bat` |
 | "Hindi ma-save sa folder ng tenant, na-download na lang" | May lumang `serve.ps1` na tumatakbo. Isara lahat ng itim na window at buksan ulit ang `.bat` |
-| Hindi lumalabas ang bagong edit sa sheet | Hintayin ng ilang minuto (delay ng Publish to web), tapos i-Refresh |
+| Hindi lumalabas ang bagong edit sa sheet | Hintayin ng ilang minuto (delay ng Publish to web), tapos i-reload ang page |
 | "Hindi makopya ang image" | Gamitin ang Download, o buksan sa Chrome o Edge gamit ang `.bat` |

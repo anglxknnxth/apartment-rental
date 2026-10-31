@@ -31,7 +31,6 @@
 .tag { margin-left: 8px; padding: 2px 8px; border-radius: 999px; background: #eef0f3; color: var(--muted); font-size: 11px; font-weight: 600; }
 @media (max-width: 800px) {
   .summary-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .summary-tile.total { grid-column: 1 / -1; }
   .summary-view .card-head { flex-wrap: wrap; }
 }
 
@@ -75,6 +74,10 @@
   .app-header { flex-wrap: wrap; }
   .view-tabs { margin-left: 0; width: 100%; }
   .view-tab { flex: 1; }
+  .summary-month { flex: 1 1 100%; min-width: 0; }
+  .summary-tile { padding: 12px; }
+  .summary-tile strong { font-size: 17px; }
+  .section-title { font-size: 16px; }
 }
 
 /* Heatmap scale: min [gradient] max · [outline] Bakante */
@@ -88,3 +91,7 @@
 .data-note { position: relative; margin: 0 0 14px; padding: 10px 14px 10px 38px; border-radius: 10px; background: var(--tint); color: var(--muted); font-size: 13px; line-height: 1.55; }
 .data-note::before { content: "i"; position: absolute; left: 13px; top: 11px; width: 16px; height: 16px; border-radius: 50%; background: var(--brand); color: #fff; font-size: 11px; font-weight: 700; font-style: italic; line-height: 16px; text-align: center; }
 .data-note strong { color: var(--brand-dark); font-weight: 600; }
+
+/* Legend: hindi nababali ang "Room 2A"; nagwa-wrap ang buong item kapag kulang ang lapad */
+.chart-legend { flex-wrap: wrap; gap: 6px 16px; }
+.chart-legend span { white-space: nowrap; }

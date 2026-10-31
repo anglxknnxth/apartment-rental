@@ -742,7 +742,9 @@ function renderLineChart(container, months, series, opts) {
   }
 
   const width = container.clientWidth, height = CHART.height;
-  const margin = { top: 14, right: 100, bottom: 26, left: 48 };
+  // Sa makitid na screen: walang end labels (nasa legend at tooltip na), kaya halos walang right margin
+  const narrow = width < 480;
+  const margin = { top: 14, right: narrow ? 16 : 100, bottom: 26, left: 48 };
   const svg = svgEl('svg', { width, height, role: 'img', 'aria-label': opts.ariaLabel });
   container.prepend(svg);
 
@@ -781,7 +783,7 @@ function renderLineChart(container, months, series, opts) {
   // End labels: ilagay lang ang hindi tatama sa ibang label (ang iba, nasa legend at tooltip)
   const placed = [];
   ends.sort((a, b) => a.y - b.y).forEach(e => {
-    if (placed.some(p => Math.abs(p - e.y) < 14)) return;
+    if (narrow || placed.some(p => Math.abs(p - e.y) < 14)) return;
     placed.push(e.y);
     const t = svgEl('text', { x: e.x + 10, y: e.y + 4, 'font-size': 11, fill: CHART.ink }, svg);
     t.textContent = series.length > 1 ? `${e.s.name} ${opts.format(e.v)}` : opts.format(e.v);
@@ -1104,7 +1106,7 @@ function openTenantMonth(name, monthLabel) {
   if (index >= 0) selectMonth(index);
 }
 
-// I-render ulit kapag na-load o na-Refresh ang data, kung nakabukas ang tab na ito
+// I-render ulit kapag na-load ang data, kung nakabukas ang tab na ito
 document.addEventListener('workbook-loaded', () => {
   if (!document.getElementById('viewSummary').hidden) renderSummary();
 });
